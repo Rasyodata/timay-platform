@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-base font-sans text-ink antialiased;
+  }
+
+  /* Recessive scrollbars — SAP Fiori açık tema */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #C1C9D2 transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: #C1C9D2;
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: #A8B2BD;
+  }
+}
+
+@layer components {
+  /* Card surface shared across widgets */
+  .card {
+    @apply rounded-2xl border border-line bg-panel shadow-card;
+  }
+
+  /* Subtle top-light gradient used on hero/metric cards */
+  .card-sheen {
+    background-image: radial-gradient(
+      120% 120% at 0% 0%,
+      rgba(255, 255, 255, 0.04) 0%,
+      rgba(255, 255, 255, 0) 45%
+    );
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium;
+  }
+
+  /* Tabular numerals for aligned figures (axis ticks, table columns) */
+  .nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Zengin-metin içeriği (Doküman/Wiki) — preflight sıfırlamalarını geri getirir */
+  .rich-content h1 { font-size: 1.45em; font-weight: 700; margin: 0.5em 0 0.3em; }
+  .rich-content h2 { font-size: 1.2em; font-weight: 700; margin: 0.5em 0 0.3em; }
+  .rich-content h3 { font-size: 1.05em; font-weight: 600; margin: 0.4em 0 0.2em; }
+  .rich-content p { margin: 0.35em 0; }
+  .rich-content ul { list-style: disc; padding-left: 1.5em; margin: 0.35em 0; }
+  .rich-content ol { list-style: decimal; padding-left: 1.5em; margin: 0.35em 0; }
+  .rich-content li { margin: 0.15em 0; }
+  .rich-content a { color: #0A4EA2; text-decoration: underline; }
+  .rich-content b, .rich-content strong { font-weight: 700; }
+  .rich-content pre { background: #ECF0F5; border-radius: 6px; padding: 0.5em 0.75em; font-family: ui-monospace, monospace; font-size: 0.9em; margin: 0.4em 0; white-space: pre-wrap; }
+  .rich-content:empty::before { content: "Doküman içeriğini buraya yazın…"; color: #8795A8; }
+}
+
+/* Yoğun ekranlar (ajanda/görev/onay/notlar vb.) — sadece masaüstünde %80 zoom; mobilde tam boyut */
+@media (min-width: 768px) {
+  .dense-zoom { zoom: 0.8; }
+}
+
+/* Yazdırma — yalnız ana içerik yazdırılır (sol bar + üst menü gizlenir) */
+@media print {
+  aside, header, .no-print { display: none !important; }
+  main { overflow: visible !important; }
+  body { background: #fff !important; }
+  .card, section, table, tr { break-inside: avoid; }
+  a[href]::after { content: ""; }
+}

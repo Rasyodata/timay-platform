@@ -1,0 +1,21 @@
+# Render Blueprint — Timay Platform (Vite SPA, static site)
+# Deploy: Render Dashboard → New + → Blueprint → bu repoyu seç → Apply
+# Not: /api/* uçları yalnızca dev sunucusunda vardır (vite plugin); canlı static'te
+# piyasa şeridi veri çekmez (zarif şekilde boş kalır). Geri kalan her şey localStorage ile çalışır.
+services:
+  - type: web
+    name: timay-platform
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+    pullRequestPreviewsEnabled: false
+    # SPA — tüm yollar index.html'e (tek sayfa)
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
