@@ -11,7 +11,6 @@ const MOD = "mod-T-0063";
 const HAND = "'Patrick Hand', 'Comic Sans MS', ui-rounded, cursive";
 const TR_AY = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 const TR_GUN = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
-const TAB_RENK = ["#FACC15", "#EF4444", "#3B82F6", "#22C55E", "#9CA3AF", "#A855F7"];
 const DURUM_SEC = ["Bekliyor", "Planlandı", "Devam Ediyor", "Tamamlandı", "İptal"];
 const DURUM_RENK: Record<string, { bg: string; tx: string }> = {
   "Devam Ediyor": { bg: "#FEF08A", tx: "#92610A" },
@@ -83,7 +82,7 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
         <div className="card grid place-items-center gap-2 p-16 text-center">
           <ClipboardList size={34} className="text-faint" />
           <p className="text-sm text-muted">Henüz toplantı notu yok.</p>
-          <button onClick={olustur} className="mt-1 flex items-center gap-1.5 rounded-lg bg-neon-blue px-3 py-1.5 text-sm font-semibold text-white"><Plus size={15} /> Toplantı Notu Oluştur</button>
+          <button onClick={olustur} className="mt-1 flex items-center gap-1.5 rounded-lg bg-neon-blue px-3 py-1.5 text-sm font-semibold text-white"><Plus size={15} /> Yeni Toplantı Tutanağı</button>
         </div>
       </div>
     );
@@ -149,11 +148,11 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
             <button onClick={() => onNavigate("ajandam")} className="flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-sm text-muted transition hover:bg-elevated hover:text-ink"><ChevronLeft size={15} /> Ajanda</button>
           )}
           <h1 className="flex items-center gap-2 text-xl font-bold text-ink">Toplantı Tutanakları <span className="rounded-md border border-line bg-base/60 px-1.5 py-0.5 font-mono text-[10px] font-normal text-muted">T-0063</span></h1>
-          {/* İleri / geri — tutanaklar arası */}
-          <div className="ml-1 flex items-center gap-1">
-            <button onClick={goPrev} disabled={idx <= 0} title="Önceki tutanak" className="grid h-8 w-8 place-items-center rounded-lg border border-line text-muted transition hover:bg-elevated disabled:opacity-40"><ChevronLeft size={16} /></button>
-            <span className="min-w-[48px] text-center text-xs text-muted nums">{idx + 1} / {recs.length}</span>
-            <button onClick={goNext} disabled={idx >= recs.length - 1} title="Sonraki tutanak" className="grid h-8 w-8 place-items-center rounded-lg border border-line text-muted transition hover:bg-elevated disabled:opacity-40"><ChevronRight size={16} /></button>
+          {/* Önceki / Sonraki toplantı tutanağı */}
+          <div className="ml-1 flex items-center gap-1.5">
+            <button onClick={goPrev} disabled={idx <= 0} className="flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-sm text-muted transition hover:bg-elevated hover:text-ink disabled:opacity-40"><ChevronLeft size={15} /> Önceki Toplantı Tutanağı</button>
+            <span className="min-w-[40px] text-center text-xs text-muted nums">{idx + 1} / {recs.length}</span>
+            <button onClick={goNext} disabled={idx >= recs.length - 1} className="flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-sm text-muted transition hover:bg-elevated hover:text-ink disabled:opacity-40">Sonraki <ChevronRight size={15} /></button>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -166,7 +165,7 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
           <button onClick={() => setEdit((v) => !v)} className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition ${edit ? "border-good bg-good/10 text-good" : "border-line text-muted hover:bg-elevated hover:text-ink"}`}>
             {edit ? <><Check size={14} /> Bitir</> : <><Pencil size={14} /> Düzenle</>}
           </button>
-          <button onClick={olustur} className="flex items-center gap-1.5 rounded-lg bg-neon-blue px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-110"><Plus size={16} /> Toplantı Notu Oluştur</button>
+          <button onClick={olustur} className="flex items-center gap-1.5 rounded-lg bg-neon-blue px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-110"><Plus size={16} /> Yeni Toplantı Tutanağı</button>
         </div>
       </div>
 
@@ -359,23 +358,6 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
           </div>
         </div>
 
-        {/* Sağ renkli sekmeler — tutanak listesi */}
-        <div className="flex flex-col gap-2 py-6">
-          {filtered.map((r, i) => {
-            const aktif = String(r.id) === String(sel.id);
-            const c = TAB_RENK[i % TAB_RENK.length];
-            const kisa = String(r.toplanti).length > 16 ? String(r.toplanti).slice(0, 15) + "…" : String(r.toplanti);
-            return (
-              <button key={r.id} onClick={() => setSelId(String(r.id))} title={`${r.tutanak_no} · ${r.toplanti}`}
-                className={`group relative -ml-1 flex min-h-[54px] w-10 items-center justify-center rounded-r-lg shadow-md transition-all hover:w-12 ${aktif ? "w-12" : ""}`}
-                style={{ background: c, opacity: aktif ? 1 : 0.8 }}>
-                <span className="whitespace-nowrap text-[12px] font-bold text-white drop-shadow" style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", fontFamily: HAND }}>{kisa}</span>
-                {aktif && <span className="absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rotate-45 bg-white shadow" />}
-              </button>
-            );
-          })}
-          {filtered.length === 0 && <span className="w-10 text-center text-[10px] text-muted" style={{ writingMode: "vertical-rl" }}>sonuç yok</span>}
-        </div>
       </div>
     </div>
   );
