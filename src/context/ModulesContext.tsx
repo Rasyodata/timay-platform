@@ -15,7 +15,7 @@ import {
 } from "@/types/modules";
 import { useAudit } from "@/context/AuditContext";
 
-const STORAGE_KEY = "timay.dynamic-modules.v69";
+const STORAGE_KEY = "timay.dynamic-modules.v70";
 
 interface NewModuleInput {
   name: string;
@@ -79,12 +79,10 @@ const SEED_TABLES: [string, string, string][] = [
   ["T-0018", "Sözleşmeler Tablosu", "İnşaat / İK / danışmanlık / tedarik sözleşmeleri"],
   ["T-0019", "Satıcı / Prim Tablosu", "Satıcı cari hesapları ve prim bakiyeleri"],
   ["T-0020", "Projeler Tablosu", "İnşaat ve gayrimenkul proje kayıtları"],
-  ["T-0021", "Risk Tablosu", "Hukuki ve operasyonel risk maddeleri"],
   ["T-0001", "Kullanıcı Cari Kart", "Kullanıcılar ve cari kartlar (müşteri · satıcı · personel · hak sahibi · danışman · yönetici) · iletişim"],
   ["T-0027", "Ödeme Sözü Kartı", "Ödeme taahhüdü · tutar · vade · durum"],
   ["T-0028", "Tahminlenen Bütçe Çıkış Kartı", "Öngörülen harcama · çıkış tipi/türü · tekrar · tahmini tutar"],
   ["T-0029", "Gider Kartı", "Düzenli gider (kira, maaş, YK, mali müşavir…) · tekrarlı çıkış"],
-  ["T-0030", "Yetki Kartı Tablosu", "Kişi/rol · yetki sınıfı · düzey (görür/değiştir/tam) · kapsam"],
   ["T-0031", "Yetki Ana Grup Tablosu", "Yetki grubu şablonu · temel rol · varsayılan düzey · kapsam modülleri"],
   ["T-0032", "Kayıt Grupları Tablosu", "Kart türüne göre gruplar (ör. Dava → Hukuk Davaları) · kart tanımlarında seçilir"],
   ["T-0033", "İnşaat Yapı Sınıfı ve Grup Tablosu", "Yapı sınıfı/grubu · sınıf tanımı · 2026 birim maliyet (TL/m²) · yaygın yapı türü örnekleri"],

@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { ShieldCheck, Plus, Trash2, ChevronRight } from "lucide-react";
+import { ShieldCheck, Plus, Trash2, ChevronRight, Settings, Table2, FileBarChart, Users as UsersIcon, History } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
 import { useUsers } from "@/context/UsersContext";
 import { useProjects } from "@/context/ProjectsContext";
+import { WORKSPACES } from "@/lib/nav";
 import type { DynamicModule } from "@/types/modules";
 
 const MOD_ID = "mod-T-0030";
@@ -10,6 +11,28 @@ const SIRKETLER = ["Toprak İnşaat", "Proje Ortaklığı", "Tümü (Konsolide)"
 const YETKI_DUZEYLERI = ["Görür", "Değiştirir", "Tam"];
 // Alan bazlı yetki seçenekleri (seçili olan sarı vurgulanır).
 const ALAN_YETKILERI = ["Görmez", "Görür", "Düzenler", "Ekler"];
+// Çalışma alanları (sol bar yönetimleri) + Ayarlar — çoklu seçim + modül yetkisi
+const AYARLAR_WS = {
+  key: "ayarlar", label: "Ayarlar", icon: Settings,
+  tabs: [
+    { icon: Table2, label: "Tablo Kayıt Ekle", view: "record-add" as const },
+    { icon: FileBarChart, label: "Evraklar", view: "evraklar" as const },
+    { icon: UsersIcon, label: "Kullanıcılar", view: "users" as const },
+    { icon: ShieldCheck, label: "Yetki ve Roller", view: "roles" as const },
+    { icon: History, label: "Denetim İzi", view: "audit" as const },
+  ],
+};
+const ALL_ALANLAR = [...WORKSPACES.map((w) => ({ key: w.key, label: w.label, icon: w.icon, tabs: w.tabs })), AYARLAR_WS];
+
+// Hazır yetki grupları (şablon) — seçince modüller bu izinle dolar. onlyKeys verilirse yalnız o alanlar.
+const HAZIR_GRUPLAR: { ad: string; perm: string; duzey: string; onlyKeys?: string[] }[] = [
+  { ad: "Yönetici — Tam Yetki", perm: "Ekler", duzey: "Tam" },
+  { ad: "Personel — Düzenler", perm: "Düzenler", duzey: "Değiştirir" },
+  { ad: "Normal Kullanıcı — Görür", perm: "Görür", duzey: "Görür" },
+  { ad: "Sekreter — Büro Yönetimi", perm: "Görür", duzey: "Görür", onlyKeys: ["buro"] },
+  { ad: "Muhasebe — Finans", perm: "Düzenler", duzey: "Değiştirir", onlyKeys: ["finans"] },
+  { ad: "Hukuk Ekibi — Hukuk", perm: "Düzenler", duzey: "Değiştirir", onlyKeys: ["hukuk"] },
+];
 
 /** Bir tablonun alanları — T-0001 (Kullanıcılar) için gerçek kullanıcı alanları, diğerleri modül alanları. */
 function fieldsOf(m: DynamicModule): Array<{ code: string; name: string }> {
@@ -54,6 +77,21 @@ export default function YetkiKartiEditor() {
   const [departman, setDepartman] = useState("");
   const [sirketler, setSirketler] = useState<string[]>([]);
   const [projeler, setProjeler] = useState<string[]>([]);
+  // Çalışma alanları (Büro/Proje/Gayrimenkul…) + o alanın modüllerine yetki (Görmez/Görür/Düzenler/Ekler)
+  const [alanlar, setAlanlar] = useState<string[]>([]);
+  const [modulYetki, setModulYetki] = useState<Record<string, string>>({});
+  const toggleAlan = (key: string) => setAlanlar((p) => (p.includes(key) ? p.filter((x) => x !== key) : [...p, key]));
+  const setModulPerm = (key: string, perm: string) => setModulYetki((p) => ({ ...p, [key]: perm }));
+  // Hazır yetki grubu seç → tüm modüller o izinle dolar, form açılır (sonra içinden değiştirilir)
+  const uygulaGrup = (g: { ad: string; perm: string; duzey: string; onlyKeys?: string[] }) => {
+    setOpen(true); setAd(g.ad); setDuzey(g.duzey);
+    const keys = g.onlyKeys ?? ALL_ALANLAR.map((w) => w.key);
+    setAlanlar(keys);
+    const mp: Record<string, string> = {};
+    ALL_ALANLAR.filter((w) => keys.includes(w.key)).forEach((w) => w.tabs.forEach((t) => { mp[`${w.key}::${String(t.view)}`] = g.perm; }));
+    setModulYetki(mp);
+    setErr("");
+  };
   const [kapsam, setKapsam] = useState("");
   const [duzey, setDuzey] = useState("Görür");
   const [err, setErr] = useState("");
@@ -85,7 +123,7 @@ export default function YetkiKartiEditor() {
   const toggleSirket = (s: string) => setSirketler((p) => (p.includes(s) ? p.filter((x) => x !== s) : [...p, s]));
   const toggleProje = (s: string) => setProjeler((p) => (p.includes(s) ? p.filter((x) => x !== s) : [...p, s]));
 
-  const reset = () => { setAd(""); setKullaniciTipi(""); setKullanici(""); setDepartman(""); setSirketler([]); setProjeler([]); setKapsam(""); setDuzey("Görür"); setYetkiTipi("Kullanıcı"); setFieldPerms({}); setExpanded(null); };
+  const reset = () => { setAd(""); setKullaniciTipi(""); setKullanici(""); setDepartman(""); setSirketler([]); setProjeler([]); setAlanlar([]); setModulYetki({}); setKapsam(""); setDuzey("Görür"); setYetkiTipi("Kullanıcı"); setFieldPerms({}); setExpanded(null); };
   const save = () => {
     if (!ad.trim()) return setErr("Yetki kartı adı zorunludur.");
     const hedef = yetkiTipi === "Kullanıcı" ? kullanici : departman;
@@ -95,6 +133,9 @@ export default function YetkiKartiEditor() {
       belge_no: belgeNo, ad: ad.trim(), yetki_tipi: yetkiTipi,
       kullanici_tipi: yetkiTipi === "Kullanıcı" ? kullaniciTipi : "",
       hedef, sirketler: sirketler.join(", "), projeler: projeler.join(", ") || "Tümü", kapsam, yetki_duzeyi: duzey,
+      calisma_alanlari: alanlar.map((k) => ALL_ALANLAR.find((w) => w.key === k)?.label ?? k).join(", ") || "Tümü",
+      modul_yetkileri: (() => { const g = Object.values(modulYetki).filter((v) => v && v !== "Görmez"); return g.length ? `${g.length} modül yetkilendirildi` : "—"; })(),
+      modul_yetkileri_detay: JSON.stringify(modulYetki),
       alan_yetkileri: (() => {
         const granted = Object.values(fieldPerms).filter((v) => v && v !== "Görmez");
         return granted.length ? `${granted.length} alan yetkilendirildi` : "—";
@@ -117,6 +158,18 @@ export default function YetkiKartiEditor() {
         <button onClick={() => setOpen((v) => !v)} className="chip border-neon-blue/40 bg-neon-blue/10 text-neon-blue transition hover:bg-neon-blue/20">
           <Plus size={14} /> Yetki Kartı Ekle
         </button>
+      </div>
+
+      {/* Hazır Yetki Grupları — tıkla, kart otomatik dolar; sonra içinden değiştir */}
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-line bg-white/[0.02] p-3">
+        <span className="text-xs font-semibold text-muted">Hazır Yetki Grubu:</span>
+        {HAZIR_GRUPLAR.map((g) => (
+          <button key={g.ad} type="button" onClick={() => uygulaGrup(g)} title="Tüm modülleri bu izinle doldurur — sonra düzenleyebilirsiniz"
+            className="flex items-center gap-1.5 rounded-lg border border-neon-blue/30 bg-neon-blue/5 px-3 py-1.5 text-xs font-medium text-neon-blue transition hover:-translate-y-0.5 hover:bg-neon-blue/15">
+            <ShieldCheck size={13} /> {g.ad}
+          </button>
+        ))}
+        <span className="text-[11px] text-faint">→ kart otomatik dolar, aşağıdan değiştirip kaydedin</span>
       </div>
 
       {open && (
@@ -163,6 +216,40 @@ export default function YetkiKartiEditor() {
               <select className={input} value={duzey} onChange={(e) => setDuzey(e.target.value)}>
                 {YETKI_DUZEYLERI.map((d) => <option key={d} value={d}>{d}</option>)}
               </select></label>
+          </div>
+
+          {/* Çalışma Alanları (Yönetim Modülleri) → çoklu seç + modül yetkileri */}
+          <div className="mt-4 rounded-xl border border-line p-3">
+            <span className="mb-2 block text-xs text-muted">Hangi Yönetim Modülleri (Çalışma Alanları) <span className="text-faint">· çoklu seç</span></span>
+            <div className="flex flex-wrap gap-2">
+              {ALL_ALANLAR.map((w) => { const on = alanlar.includes(w.key); return (
+                <button key={w.key} type="button" onClick={() => toggleAlan(w.key)} className={`chip ${on ? "border-neon-blue/50 bg-neon-blue/10 text-neon-blue" : "border-line text-muted hover:text-ink"}`}>
+                  <w.icon size={13} /> {on ? "✓ " : ""}{w.label}
+                </button>
+              ); })}
+            </div>
+            {alanlar.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <p className="text-[11px] text-faint">Seçilen alanların modüllerine yetki verin: <b className="text-muted">Görmez / Görür / Düzenler / Ekler</b></p>
+                {ALL_ALANLAR.filter((w) => alanlar.includes(w.key)).map((w) => (
+                  <div key={w.key} className="rounded-lg border border-line bg-white/[0.02] p-2.5">
+                    <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-ink"><w.icon size={13} className="text-neon-blue" /> {w.label}</p>
+                    <div className="space-y-1">
+                      {w.tabs.map((t) => { const key = `${w.key}::${String(t.view)}`; const cur = modulYetki[key] ?? "Görmez"; return (
+                        <div key={String(t.view)} className="flex flex-wrap items-center gap-2">
+                          <span className="flex w-44 shrink-0 items-center gap-1.5 truncate text-xs text-ink"><t.icon size={12} className="text-muted" /> {t.label}</span>
+                          <div className="flex flex-wrap gap-1">
+                            {ALAN_YETKILERI.map((opt) => { const sel = cur === opt; return (
+                              <button key={opt} type="button" onClick={() => setModulPerm(key, opt)} className={`rounded-md border px-2 py-0.5 text-[11px] transition ${sel ? "border-neon-blue/60 bg-neon-blue/20 font-semibold text-neon-blue" : "border-line text-muted hover:text-ink"}`}>{opt}</button>
+                            ); })}
+                          </div>
+                        </div>
+                      ); })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="mt-3">
@@ -271,6 +358,7 @@ export default function YetkiKartiEditor() {
         </div>
       )}
 
+      <h4 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-ink"><ShieldCheck size={15} className="text-neon-violet" /> Yetki Ana Grup Tablosu <span className="text-[11px] font-normal text-muted">({records.length})</span></h4>
       {records.length === 0 ? (
         <div className="grid place-items-center rounded-xl border border-dashed border-line py-8 text-sm text-muted">Yetki kartı yok.</div>
       ) : (
@@ -282,9 +370,9 @@ export default function YetkiKartiEditor() {
                 <th className="px-3 py-2 font-medium text-muted">Ad</th>
                 <th className="px-3 py-2 font-medium text-muted">Yetki Tipi</th>
                 <th className="px-3 py-2 font-medium text-muted">Hedef</th>
+                <th className="px-3 py-2 font-medium text-muted">Yönetim Modülleri</th>
                 <th className="px-3 py-2 font-medium text-muted">Şirketler</th>
                 <th className="px-3 py-2 font-medium text-muted">Projeler</th>
-                <th className="px-3 py-2 font-medium text-muted">Kapsam</th>
                 <th className="px-3 py-2 font-medium text-muted">Düzey</th>
                 <th className="px-3 py-2" />
               </tr>
@@ -296,9 +384,12 @@ export default function YetkiKartiEditor() {
                   <td className="px-3 py-2.5 font-medium text-ink">{String(r.ad ?? "—")}</td>
                   <td className="px-3 py-2.5"><span className="chip border-neon-violet/30 bg-neon-violet/10 text-neon-violet">{String(r.yetki_tipi ?? "—")}</span></td>
                   <td className="px-3 py-2.5 text-ink">{String(r.hedef ?? "—")}{r.kullanici_tipi ? <span className="block text-[11px] text-faint">{String(r.kullanici_tipi)}</span> : null}</td>
+                  <td className="px-3 py-2.5 text-muted">
+                    <span className="block max-w-[260px] truncate text-ink" title={String(r.calisma_alanlari || "Tümü")}>{String(r.calisma_alanlari || "Tümü")}</span>
+                    {r.modul_yetkileri && r.modul_yetkileri !== "—" ? <span className="block text-[11px] text-faint">{String(r.modul_yetkileri)}</span> : null}
+                  </td>
                   <td className="px-3 py-2.5 text-muted">{String(r.sirketler || "—")}</td>
                   <td className="px-3 py-2.5 text-muted">{String(r.projeler || "Tümü")}</td>
-                  <td className="px-3 py-2.5 text-muted">{String(r.kapsam || "Tümü")}</td>
                   <td className="px-3 py-2.5 text-ink">{String(r.yetki_duzeyi ?? "—")}</td>
                   <td className="px-3 py-2.5 text-right">
                     <button onClick={() => deleteRecord(MOD_ID, String(r.id))} className="rounded-md p-1 text-muted transition hover:text-critical" aria-label="Sil"><Trash2 size={14} /></button>
