@@ -15,7 +15,7 @@ import {
 } from "@/types/modules";
 import { useAudit } from "@/context/AuditContext";
 
-const STORAGE_KEY = "timay.dynamic-modules.v67";
+const STORAGE_KEY = "timay.dynamic-modules.v68";
 
 interface NewModuleInput {
   name: string;
@@ -192,6 +192,39 @@ function specialTables(): DynamicModule[] {
       [
         { id: "di1", dosya_no: "DI-2026-0001", dosya_konusu: "Tedarikçi sözleşme ihlali", islem_tipi: "Dava", dava_turu: "Hukuk Davası", taraf: "Lehine", anlasma_butce: 150000, dava_gideri: 12000, odeme_tarihi: "2026-11-15", vekaletname: "VEK-2026-044", karsi_taraf: "Beta Tedarik Ltd.", grup: "Hukuk Davaları", durum: "Devam Ediyor", aciklama: "İlk duruşma Kasım; sulh görüşmesi değerlendiriliyor." },
         { id: "di2", dosya_no: "DI-2026-0002", dosya_konusu: "Kira alacağı icra takibi", islem_tipi: "İcra", dava_turu: "İcra Takibi", taraf: "Lehine", anlasma_butce: 60000, dava_gideri: 4500, odeme_tarihi: "2026-10-30", vekaletname: "VEK-2026-051", karsi_taraf: "Delta Danışmanlık", grup: "İcra Dosyaları", durum: "Onay Bekliyor", aciklama: "Ödeme emri tebliğ edildi." },
+      ],
+    ),
+    mkTbl("T-0082", "Duruşma & İşlem Takvimi",
+      "Dava/icra dosyalarına bağlı duruşma, keşif, tebligat ve süre takibi · yaklaşan işlemler panelde uyarılır.", "CalendarClock",
+      [
+        { code: "dosya_no", name: "Dosya No", type: "TEXT", required: true, visibility: "EVERYONE" },
+        { code: "islem_turu", name: "İşlem Türü", type: "DROPDOWN", required: true, visibility: "EVERYONE", options: ["Duruşma", "Ön İnceleme", "Keşif", "Tebligat", "Süre / Zamanaşımı", "İcra İşlemi", "Müzekkere", "Diğer"] },
+        { code: "tarih", name: "Tarih", type: "DATE", required: true, visibility: "EVERYONE" },
+        { code: "saat", name: "Saat", type: "TIME", required: false, visibility: "EVERYONE" },
+        { code: "mahkeme", name: "Mahkeme / İcra Dairesi", type: "TEXT", required: false, visibility: "EVERYONE" },
+        { code: "sonraki_islem", name: "Sonraki İşlem / Hazırlık", type: "TEXT", required: false, visibility: "EVERYONE" },
+        { code: "durum", name: "Durum", type: "DROPDOWN", required: false, visibility: "EVERYONE", options: ["Bekliyor", "Yapıldı", "Ertelendi", "İptal"] },
+        { code: "aciklama", name: "Not", type: "TEXTAREA", required: false, visibility: "EVERYONE" },
+      ],
+      [
+        { id: "du1", dosya_no: "DI-2026-0001", islem_turu: "Duruşma", tarih: "2026-11-12", saat: "10:30", mahkeme: "İstanbul 3. Asliye Ticaret Mah.", sonraki_islem: "Tanık listesi ve delil dilekçesi sun", durum: "Bekliyor", aciklama: "İlk duruşma; sulh görüşmesi değerlendirilecek." },
+        { id: "du2", dosya_no: "DI-2026-0002", islem_turu: "İcra İşlemi", tarih: "2026-10-30", saat: "", mahkeme: "İstanbul 8. İcra Dairesi", sonraki_islem: "Ödeme emri kesinleşme kontrolü", durum: "Bekliyor", aciklama: "Haciz talebi hazırlığı." },
+      ],
+    ),
+    mkTbl("T-0083", "Müvekkiller",
+      "Müvekkil kartları · iletişim · cari bakiye · bağlı dosyalar.", "Users",
+      [
+        { code: "ad", name: "Ad / Unvan", type: "TEXT", required: true, visibility: "EVERYONE" },
+        { code: "tur", name: "Tür", type: "DROPDOWN", required: false, visibility: "EVERYONE", options: ["Gerçek Kişi", "Tüzel Kişi"] },
+        { code: "tc_vergi", name: "TC / Vergi No", type: "TEXT", required: false, visibility: "EVERYONE" },
+        { code: "telefon", name: "Telefon", type: "TEXT", required: false, visibility: "EVERYONE" },
+        { code: "eposta", name: "E-posta", type: "TEXT", required: false, visibility: "EVERYONE" },
+        { code: "adres", name: "Adres", type: "TEXTAREA", required: false, visibility: "EVERYONE" },
+        { code: "bakiye", name: "Cari Bakiye (₺)", type: "NUMBER", required: false, visibility: "ONLY_MANAGERS" },
+        { code: "durum", name: "Durum", type: "DROPDOWN", required: false, visibility: "EVERYONE", options: ["Aktif", "Pasif"] },
+      ],
+      [
+        { id: "mv1", ad: "Timay Teknoloji A.Ş.", tur: "Tüzel Kişi", tc_vergi: "1234567890", telefon: "0352 000 00 00", eposta: "hukuk@timay.co", adres: "Kayseri", bakiye: 150000, durum: "Aktif" },
       ],
     ),
     mkTbl("T-0049", "Randevu / Takvim Tablosu",

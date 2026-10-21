@@ -15,6 +15,10 @@ import {
   Truck,
   Users,
   Wrench,
+  CalendarClock,
+  Gavel,
+  Scale,
+  ShieldCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -36,6 +40,10 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   ClipboardList,
   Cpu,
   HardDrive,
+  CalendarClock,
+  Gavel,
+  Scale,
+  ShieldCheck,
 };
 
 export const ICON_CHOICES = Object.keys(ICON_MAP);

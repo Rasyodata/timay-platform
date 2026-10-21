@@ -30,6 +30,8 @@ import {
   ClipboardList,
   Scale,
   FileText,
+  CalendarClock,
+  Calculator,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { View } from "@/App";
@@ -93,11 +95,15 @@ export const WORKSPACES: Workspace[] = [
     ],
   },
   {
-    key: "hukuk", label: "Hukuk Yönetimi", icon: Scale, defaultView: "mod:mod-T-0016",
+    key: "hukuk", label: "Hukuk Yönetimi", icon: Scale, defaultView: "hukuk",
     tabs: [
-      { icon: FileText, label: "Davalar & İcra", view: "mod:mod-T-0016", kod: "T-0016" },
-      { icon: ShieldCheck, label: "Avukatlar", view: "mod:mod-T-0017", kod: "T-0017" },
-      { icon: Gavel, label: "Dilekçe (AI)", view: "hukuk-dilekce", kod: "AI" },
+      { icon: LayoutDashboard, label: "Panel", view: "hukuk" },
+      { icon: FileText, label: "Davalar & İcra", view: "mod:mod-T-0016" },
+      { icon: CalendarClock, label: "Duruşmalar", view: "mod:mod-T-0082" },
+      { icon: Users, label: "Müvekkiller", view: "mod:mod-T-0083" },
+      { icon: ShieldCheck, label: "Avukatlar", view: "mod:mod-T-0017" },
+      { icon: Gavel, label: "Dilekçe (AI)", view: "hukuk-dilekce" },
+      { icon: Calculator, label: "Faiz/Harç", view: "hukuk-hesap" },
     ],
   },
   {
