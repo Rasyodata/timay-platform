@@ -22,16 +22,6 @@ const pad = (n: number) => String(n).padStart(2, "0");
 const dstr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const parseH = (s: unknown) => { const m = String(s).match(/(\d{1,2}):(\d{2})/); return m ? parseInt(m[1]) : NaN; };
 const PASTEL: Record<string, string> = { Mavi: "#DBEAFE", Yeşil: "#DCFCE7", Turuncu: "#FEF3C7", Kırmızı: "#FEE2E2", Mor: "#EDE9FE", Gri: "#EEF2F6" };
-// Kayıt tipi → renk + kısa etiket (ne olduğunu göster)
-const TIP_META: Record<string, { renk: string; kisa: string }> = {
-  "Ajanda": { renk: "#0A4EA2", kisa: "AJANDA" },
-  "Etkinlik": { renk: "#0d9488", kisa: "ETKİNLİK" },
-  "Görev": { renk: "#1E7A46", kisa: "GÖREV" },
-  "Not": { renk: "#CA8A04", kisa: "NOT" },
-  "Onay": { renk: "#B5731A", kisa: "ONAY" },
-  "Talep": { renk: "#C1292E", kisa: "TALEP" },
-  "Tutanak": { renk: "#7C3AED", kisa: "TUTANAK" },
-};
 const iconFor = (t: string): typeof Users => {
   const s = t.toLocaleLowerCase("tr");
   if (/toplant|ekip|sunum|görüşme/.test(s)) return Users;
@@ -62,7 +52,6 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
   const [ruh, setRuh] = useState(0);
   const [lchk, setLchk] = useState<Record<string, boolean>>({});
   const [addModal, setAddModal] = useState<{ modId: string; baslik: string; defaults: Record<string, unknown> } | null>(null);
-  const [editModal, setEditModal] = useState<{ modId: string; rec: DynamicRecord } | null>(null);
   const lt = (id: string) => setLchk((p) => ({ ...p, [id]: !p[id] }));
 
   const curDate = new Date(cur);
@@ -97,17 +86,6 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
   // Yarının hedefleri: ertesi gün T-0057
   const yarin = recs("mod-T-0057").filter((r) => String(r.tarih) === nextStr).slice(0, 4).map((r) => String(r.baslik));
 
-  // Günün Kayıtları — bu güne düşen Not/Görev/Onay/Talep/Etkinlik/Ajanda/Tutanak (tip etiketli)
-  const dayEntries: { id: string; tip: string; title: string; time: string; modId: string; rec: DynamicRecord }[] = [
-    ...recs("mod-T-0057").filter((r) => String(r.tarih) === curStr).map((r) => ({ id: "a" + r.id, tip: "Ajanda", title: String(r.baslik), time: String(r.saat || ""), modId: "mod-T-0057", rec: r })),
-    ...recs("mod-T-0060").filter((r) => String(r.tarih) === curStr).map((r) => ({ id: "e" + r.id, tip: "Etkinlik", title: String(r.baslik), time: String(r.baslangic_saat || ""), modId: "mod-T-0060", rec: r })),
-    ...recs("mod-T-0068").filter((r) => String(r.tarih) === curStr && r.arsiv !== true).map((r) => ({ id: "n" + r.id, tip: "Not", title: String(r.baslik), time: "", modId: "mod-T-0068", rec: r })),
-    ...recs("mod-T-0056").filter((r) => String(r.termin || r.baslangic) === curStr).map((r) => ({ id: "g" + r.id, tip: "Görev", title: String(r.baslik), time: "", modId: "mod-T-0056", rec: r })),
-    ...recs("mod-T-0045").filter((r) => String(r.tarih) === curStr).map((r) => ({ id: "o" + r.id, tip: "Onay", title: String(r.konu), time: "", modId: "mod-T-0045", rec: r })),
-    ...recs("mod-T-0076").filter((r) => String(r.tarih) === curStr).map((r) => ({ id: "q" + r.id, tip: "Talep", title: String(r.konu), time: "", modId: "mod-T-0076", rec: r })),
-    ...recs("mod-T-0063").filter((r) => String(r.tarih) === curStr).map((r) => ({ id: "t" + r.id, tip: "Tutanak", title: String(r.toplanti), time: "", modId: "mod-T-0063", rec: r })),
-  ].sort((a, b) => a.time.localeCompare(b.time));
-
   const nav = (d: number) => setCur((c) => c + d * ONE);
   const bugun = () => { const d = new Date(); d.setHours(0, 0, 0, 0); setCur(d.getTime()); };
 
@@ -128,10 +106,18 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
   );
   const Bos = ({ msg }: { msg: string }) => <p className="py-2 text-center text-[12px] text-ink/40">{msg}</p>;
 
+  // Her bölüm başlığına "+ Ekle" — ilgili tabloya kayıt açar (tarih = seçili gün)
+  const AddBtn = ({ modId, defaults, tarih }: { modId: string; defaults?: Record<string, unknown>; tarih?: string }) => (
+    <button onClick={() => setAddModal({ modId, baslik: "Kayıt", defaults: { tarih: tarih ?? curStr, ...(defaults ?? {}) } })}
+      className="flex items-center gap-1 rounded-md bg-white/70 px-2 py-0.5 text-[10px] font-semibold text-ink/70 transition hover:text-neon-blue" style={{ fontFamily: "inherit" }}>
+      <Plus size={11} /> Ekle
+    </button>
+  );
+
   const ONCELIK = [
-    { key: "A", title: "ÖNCELİKLİ (A)", renk: "#FECACA", icon: AlertCircle, items: byOncelik(/kritik|yüksek/i) },
-    { key: "B", title: "ORTA (B)", renk: "#FDE68A", icon: ArrowRight, items: byOncelik(/orta|normal/i) },
-    { key: "C", title: "DAHA SONRA (C)", renk: "#BBF7D0", icon: Clock3, items: byOncelik(/düşük/i) },
+    { key: "A", title: "ÖNCELİKLİ (A)", renk: "#FECACA", icon: AlertCircle, onc: "Yüksek", items: byOncelik(/kritik|yüksek|acil/i) },
+    { key: "B", title: "ORTA (B)", renk: "#FDE68A", icon: ArrowRight, onc: "Orta", items: byOncelik(/orta|normal/i) },
+    { key: "C", title: "DAHA SONRA (C)", renk: "#BBF7D0", icon: Clock3, onc: "Düşük", items: byOncelik(/düşük/i) },
   ];
 
   return (
@@ -218,7 +204,7 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
           <div className="space-y-3 p-5">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {ONCELIK.map((col) => (
-                <Card key={col.key} title={col.title} icon={col.icon} renk={col.renk}>
+                <Card key={col.key} title={col.title} icon={col.icon} renk={col.renk} extra={<AddBtn modId="mod-T-0056" defaults={{ oncelik: col.onc, durum: "Yapılacak" }} />}>
                   <div className="space-y-0.5">
                     {col.items.length ? col.items.map((g) => <Chk key={String(g.id)} checked={String(g.durum) === "Tamamlandı"} onToggle={() => toggleT56(g)} label={String(g.baslik)} strike />) : <Bos msg="—" />}
                   </div>
@@ -226,7 +212,7 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
               ))}
             </div>
 
-            <Card title="TOPLANTI NOTLARI" icon={Users} renk="#CFE4F7" extra={tutanak ? <span className="text-[10px] text-ink/60">{String(tutanak.saat || "")} · {String(tutanak.toplanti)}</span> : undefined}>
+            <Card title="TOPLANTI NOTLARI" icon={Users} renk="#CFE4F7" extra={<div className="flex items-center gap-2">{tutanak ? <span className="text-[10px] text-ink/60">{String(tutanak.saat || "")} · {String(tutanak.toplanti)}</span> : null}<AddBtn modId="mod-T-0063" /></div>}>
               {tutanak ? (
                 <div className="flex flex-wrap gap-3">
                   <ul className="min-w-[180px] flex-1 space-y-0.5 text-[13px] text-ink/85">{kararlar.map((x, i) => <li key={i} className="flex gap-1.5"><span className="text-ink/40">•</span>{x}</li>)}</ul>
@@ -240,7 +226,7 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
               ) : <Bos msg="Bu güne ait toplantı tutanağı yok." />}
             </Card>
 
-            <Card title="FİKİRLER / NOTLAR" icon={Lightbulb} renk="#FDE9B5">
+            <Card title="FİKİRLER / NOTLAR" icon={Lightbulb} renk="#FDE9B5" extra={<AddBtn modId="mod-T-0066" />}>
               <div className="flex flex-wrap items-center gap-3">
                 <ul className="min-w-[200px] flex-1 space-y-0.5 text-[13px] text-ink/85">{fikirler.length ? fikirler.map((x, i) => <li key={i} className="flex gap-1.5"><span className="text-ink/40">•</span>{x}</li>) : <Bos msg="Fikir havuzu boş." />}</ul>
                 <svg viewBox="0 0 230 130" className="h-28 w-56 shrink-0">
@@ -265,7 +251,7 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
                 <div className="flex items-center justify-center gap-3">{[Smile, Meh, Frown].map((Ic, i) => <button key={i} onClick={() => setRuh(i)} className={i === ruh ? "text-good" : "text-ink/30"}><Ic size={26} /></button>)}</div>
                 <p className="mt-1 text-center text-ink/70" style={{ fontFamily: "'Caveat', cursive", fontSize: 15 }}>{["Verimli bir gün", "Normal bir gün", "Zorlu bir gün"][ruh]}</p>
               </Card>
-              <Card title="YARININ HEDEFLERİ" icon={CalendarCheck} renk="#CFE4F7">
+              <Card title="YARININ HEDEFLERİ" icon={CalendarCheck} renk="#CFE4F7" extra={<AddBtn modId="mod-T-0057" tarih={nextStr} />}>
                 <div className="space-y-0.5">{yarin.length ? yarin.map((x, i) => <Chk key={i} checked={!!lchk["yr" + nextStr + i]} onToggle={() => lt("yr" + nextStr + i)} label={x} />) : <Bos msg="Yarına planlı iş yok." />}</div>
               </Card>
             </div>
@@ -275,10 +261,10 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
 
       {/* Alt: BUGÜN YAPILACAKLAR / ÖNEMLİ NOTLAR / ARAMA */}
       <div className="ml-8 mt-3 grid grid-cols-1 gap-3 rounded-xl border border-[#E7DFC9] bg-[#FBF7EC] p-5 shadow-sm md:grid-cols-3" style={{ fontFamily: HAND }}>
-        <Card title="BUGÜN YAPILACAKLAR" icon={CheckSquare} renk="#CFE4F7">
+        <Card title="BUGÜN YAPILACAKLAR" icon={CheckSquare} renk="#CFE4F7" extra={<AddBtn modId="mod-T-0057" tarih={curStr} />}>
           <div className="space-y-0.5">{gorevler.length ? gorevler.map((g) => <Chk key={String(g.id)} checked={String(g.durum) === "Tamamlandı"} onToggle={() => toggleGorev(g)} label={<span>{String(g.baslik)} {g.saat ? <span className="text-[10px] text-ink/45">· {String(g.saat)}</span> : null}</span>} strike />) : <Bos msg="Bu güne görev yok." />}</div>
         </Card>
-        <Card title="ÖNEMLİ NOTLAR" icon={Heart} renk="#FBD5DE">
+        <Card title="ÖNEMLİ NOTLAR" icon={Heart} renk="#FBD5DE" extra={<AddBtn modId="mod-T-0068" defaults={{ renk: "Sarı" }} />}>
           {notlar.length ? <ul className="space-y-1 text-[13px] text-ink/85">{notlar.map((x, i) => <li key={i} className="flex gap-1.5"><span className="text-ink/40">•</span>{x}</li>)}</ul> : <Bos msg="Not yok." />}
         </Card>
         <Card title="ARAMA / GÖRÜŞME LİSTESİ" icon={Search} renk="#CFE4F7">
@@ -289,23 +275,6 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
               {lchk["c" + u.id] ? <CheckSquare size={14} className="text-good" /> : <Square size={14} className="text-ink/30" />}
             </button>
           ))}</div>
-        </Card>
-      </div>
-
-      {/* GÜNÜN KAYITLARI — bu güne düşen tüm kayıtlar, tip etiketli (Not / Görev / Onay / Talep …) */}
-      <div className="ml-8 mt-3 rounded-xl border border-[#E7DFC9] bg-[#FBF7EC] p-5 shadow-sm" style={{ fontFamily: HAND }}>
-        <Card title="GÜNÜN KAYITLARI" icon={CalendarCheck} renk="#CFE4F7" extra={<span className="text-[10px] text-ink/60">{dayEntries.length} kayıt · tiplere göre</span>}>
-          {dayEntries.length ? (
-            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3" style={{ fontFamily: "ui-sans-serif, system-ui" }}>
-              {dayEntries.map((e) => { const m = TIP_META[e.tip]; return (
-                <button key={e.id} onClick={() => setEditModal({ modId: e.modId, rec: e.rec })} className="flex items-center gap-2 rounded-lg border border-black/10 bg-white/70 px-2.5 py-1.5 text-left transition hover:border-neon-blue/50">
-                  <span className="w-14 shrink-0 rounded px-1 py-0.5 text-center text-[8px] font-bold tracking-wide text-white" style={{ background: m.renk }}>{m.kisa}</span>
-                  {e.time ? <span className="shrink-0 text-[10px] text-ink/50 nums">{e.time}</span> : null}
-                  <span className="flex-1 truncate text-[13px] text-ink/85">{e.title}</span>
-                </button>
-              ); })}
-            </div>
-          ) : <Bos msg="Bu güne düşen kayıt yok." />}
         </Card>
       </div>
 
@@ -322,25 +291,6 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
                 ? <TalepForm initial="new" onClose={() => setAddModal(null)} />
                 : getModule(addModal.modId)
                   ? <RecordForm mod={getModule(addModal.modId)!} defaults={addModal.defaults} onClose={() => setAddModal(null)} />
-                  : <p className="text-sm text-muted">Tablo bulunamadı.</p>}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Günün Kayıtları'ndan kayıt düzenleme modalı */}
-      {editModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 py-10 font-sans backdrop-blur-sm" onClick={() => setEditModal(null)}>
-          <div className="w-full max-w-2xl rounded-2xl border border-line bg-panel shadow-card animate-fade-in" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-line px-5 py-3">
-              <h3 className="text-sm font-semibold text-ink">{String(editModal.rec.baslik ?? editModal.rec.konu ?? editModal.rec.toplanti ?? "Kayıt")}</h3>
-              <button onClick={() => setEditModal(null)} className="grid h-8 w-8 place-items-center rounded-lg text-muted transition hover:bg-elevated"><X size={16} /></button>
-            </div>
-            <div className="p-4">
-              {editModal.modId === "mod-T-0076"
-                ? <TalepForm initial={editModal.rec} onClose={() => setEditModal(null)} />
-                : getModule(editModal.modId)
-                  ? <RecordForm mod={getModule(editModal.modId)!} initial={editModal.rec} onClose={() => setEditModal(null)} />
                   : <p className="text-sm text-muted">Tablo bulunamadı.</p>}
             </div>
           </div>

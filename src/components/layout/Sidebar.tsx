@@ -18,7 +18,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
     <button
       onClick={onClick}
       title={collapsed ? (title ?? label) : undefined}
-      className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+      className={`group relative flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium transition ${
         active ? "bg-neon-blue text-white shadow-sm" : "text-slate-300 hover:bg-white/10 hover:text-white"
       } ${collapsed ? "justify-center" : ""}`}
     >
