@@ -1,5 +1,5 @@
-import { useState, useEffect, type DragEvent } from "react";
-import { ChevronLeft, ChevronRight, Printer, Plus, X, Users, Utensils, Phone, AlertCircle, FileText, BarChart3, Scale, CheckSquare, Bell, Sun, Folder, Search, TrendingUp } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight, Printer, Plus, X, AlertCircle, FileText, CheckSquare, Bell, Sun, Folder, Search, TrendingUp, BookOpen, Send, Trash2, CheckCircle2 } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
 import { RecordForm } from "@/components/projects/ProjectTableCard";
 import TalepForm from "@/components/requests/TalepForm";
@@ -13,15 +13,11 @@ const pad = (n: number) => String(n).padStart(2, "0");
 const dstr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const dmy = (iso: string) => (iso ? iso.split("-").reverse().join(".") : "");
 const ONE = 86400000;
-const parseT = (s: string) => { const m = String(s).match(/(\d{1,2}):(\d{2})/); return m ? parseInt(m[1]) + parseInt(m[2]) / 60 : NaN; };
-
-// Zaman çizelgesi
-const START_H = 8, END_H = 20, PXH = 66;
 
 const RENK: Record<string, string> = { Mavi: "#0A4EA2", Yeşil: "#1E7A46", Turuncu: "#B5731A", Kırmızı: "#C1292E", Mor: "#4B3FB0", Gri: "#5A6B82" };
 // Not renkleri (T-0068) → takvim noktası rengi
 const NOT_RENK: Record<string, string> = { Sarı: "#CA8A04", Yeşil: "#16A34A", Mavi: "#2563EB", Pembe: "#DB2777", Mor: "#7C3AED", Gri: "#64748B" };
-// Kayıt tipi → renk + kısa etiket (takvimde/ajandada ne olduğunu göster)
+// Kayıt tipi → renk + kısa etiket (deftere ne olduğunu göster)
 const TIP_META: Record<string, { renk: string; kisa: string }> = {
   "Ajanda": { renk: "#0A4EA2", kisa: "AJANDA" },
   "Etkinlik": { renk: "#0d9488", kisa: "ETKİNLİK" },
@@ -31,29 +27,18 @@ const TIP_META: Record<string, { renk: string; kisa: string }> = {
   "Talep": { renk: "#C1292E", kisa: "TALEP" },
   "Tutanak": { renk: "#7C3AED", kisa: "TUTANAK" },
 };
-const iconFor = (text: string) => {
-  const t = text.toLowerCase();
-  if (/toplant|ekip|sunum/.test(t)) return Users;
-  if (/öğle|yemek/.test(t)) return Utensils;
-  if (/telefon|çağrı|görüşme|ara/.test(t)) return Phone;
-  if (/teknik|kontrol|güvenlik|test/.test(t)) return AlertCircle;
-  if (/rapor|analiz|değerlend/.test(t)) return BarChart3;
-  if (/hukuk|sözleşme|dava/.test(t)) return Scale;
-  return FileText;
-};
-
-type Blk = { key: string; rec: DynamicRecord; mod: DynamicModule; s: number; e: number; title: string; sub: string; color: string };
 
 export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigate: (v: View) => void; projeFilter?: string }) {
-  const { getModule, updateRecord } = useModules();
+  const { getModule, addRecord, deleteRecord } = useModules();
   const [calView, setCalView] = useState<"gun" | "hafta" | "ay" | "liste">("gun");
   const [cur, setCur] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); });
   const [modal, setModal] = useState<{ mod: DynamicModule; rec: DynamicRecord | "new"; defaults?: Record<string, unknown> } | null>(null);
   const [talepModal, setTalepModal] = useState(false);
   const [q, setQ] = useState("");
-  // Sürükle-ekle: Hızlı İşlemler'den takvime
+  // Deftere hızlı not
+  const [noteText, setNoteText] = useState("");
+  // Sürükle-ekle: Hızlı İşlemler'den deftere/takvime
   const [dragKind, setDragKind] = useState<string | null>(null);
-  const [dropH, setDropH] = useState<number | null>(null);
   const [dropDay, setDropDay] = useState<string | null>(null);
   const [piyasa, setPiyasa] = useState<{ kod: string; ad: string; deger: string; yuzde: number }[]>([]);
 
@@ -89,22 +74,6 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
   const curStr = dstr(curDate);
   const td = dstr(new Date());
 
-  // Zaman çizelgesi blokları = günün etkinlikleri (T-0060, saatli).
-  const blocks: Blk[] = ev
-    .filter((r) => String(r.tarih) === curStr && r.baslangic_saat)
-    .map((r) => {
-      const s = parseT(String(r.baslangic_saat));
-      const e2 = parseT(String(r.bitis_saat));
-      return { key: "e" + r.id, rec: r, mod: evMod!, s, e: isNaN(e2) ? s + 1 : e2, title: String(r.baslik), sub: String(r.konum || r.tur || ""), color: RENK[String(r.renk)] || "#0A4EA2" };
-    })
-    .filter((b) => !isNaN(b.s)).sort((a, b) => a.s - b.s);
-
-  // Bugünün görevleri = günün ajanda maddeleri (checkbox: durum ↔ Tamamlandı)
-  const gorevler = aj.filter((r) => String(r.tarih) === curStr).sort((a, b) => String(a.saat || "").localeCompare(String(b.saat || "")));
-  const done = gorevler.filter((r) => String(r.durum) === "Tamamlandı").length;
-  const pct = gorevler.length ? Math.round((done / gorevler.length) * 100) : 0;
-  const toggle = (r: DynamicRecord) => updateRecord("mod-T-0057", String(r.id), { durum: String(r.durum) === "Tamamlandı" ? "Yapılacak" : "Tamamlandı" });
-
   // Mini ay takvimi
   const my = curDate.getFullYear(), mm = curDate.getMonth();
   const firstDow = (new Date(my, mm, 1).getDay() + 6) % 7;
@@ -121,6 +90,20 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
   const pfBaslik = pf ? { baslik: `${projeFilter} · ` } : {};
   const openNew = () => setModal({ mod: ajMod!, rec: "new", defaults: { tarih: curStr, ...pfBaslik } });
 
+  // Deftere hızlı not yaz (T-0068) — seçili güne yazılır, defterde "NOT" olarak çıkar
+  const saveNote = () => {
+    const t = noteText.trim();
+    if (!t || !notMod) return;
+    addRecord("mod-T-0068", { baslik: t, renk: "Sarı", tarih: curStr, ...(pf ? { aciklama: String(projeFilter) } : {}) });
+    setNoteText("");
+  };
+  // Kullanıcı kendi kaydını silebilir / onaya gönderebilir (onaya gönderince kaynak kaldırılır)
+  const silDefter = (e: (typeof allEntries)[number]) => deleteRecord(e.mod.id, String(e.rec.id));
+  const onayaGonder = (e: (typeof allEntries)[number]) => {
+    addRecord("mod-T-0045", { konu: e.title, tarih: e.date || curStr, durum: "Bekliyor", aciklama: `${TIP_META[e.tip]?.kisa || e.tip} · ${e.title}` });
+    deleteRecord(e.mod.id, String(e.rec.id));
+  };
+
   // Hızlı İşlem türüne göre ekleme modalını aç (sürükle-bırak veya tıklama) — isteğe bağlı tarih/saat ile
   const addH = (t: string) => { const [h, m] = t.split(":").map(Number); return `${pad((h + 1) % 24)}:${pad(m || 0)}`; };
   const openKind = (kind: string, opts?: { saat?: string; date?: string }) => {
@@ -132,18 +115,8 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
     else if (kind === "talep") setTalepModal(true);
     else if (kind === "tutanak") onNavigate("tutanak");
   };
-  // Zaman çizelgesine (Gün) bırakınca saati hesapla
-  const onTimelineDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (!dragKind) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    let h = START_H + (e.clientY - rect.top) / PXH;
-    h = Math.max(START_H, Math.min(END_H, Math.round(h * 2) / 2));
-    openKind(dragKind, { saat: `${pad(Math.floor(h))}:${pad((h % 1) * 60)}` });
-    setDragKind(null); setDropH(null);
-  };
 
-  // Hafta/Ay/Liste için birleşik tarihli kayıtlar — her biri tip etiketli (Not/Görev/Onay/Talep…)
+  // Birleşik tarihli kayıtlar — her biri tip etiketli (Not/Görev/Onay/Talep…). Defter + Hafta/Ay/Liste bunu kullanır.
   const allEntries = [
     ...aj.filter((r) => r.tarih).map((r) => ({ key: "a" + r.id, rec: r, mod: ajMod!, date: String(r.tarih), time: String(r.saat || ""), title: String(r.baslik), tip: "Ajanda", color: TIP_META.Ajanda.renk })),
     ...ev.filter((r) => r.tarih).map((r) => ({ key: "e" + r.id, rec: r, mod: evMod!, date: String(r.tarih), time: String(r.baslangic_saat || ""), title: String(r.baslik), tip: "Etkinlik", color: RENK[String(r.renk)] || TIP_META.Etkinlik.renk })),
@@ -154,6 +127,7 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
     ...talepRecs.filter((r) => r.tarih).map((r) => ({ key: "q" + r.id, rec: r, mod: talepMod!, date: String(r.tarih), time: "", title: String(r.konu), tip: "Talep", color: TIP_META.Talep.renk })),
   ];
   const onDate = (s: string) => allEntries.filter((e) => e.date === s).sort((a, b) => a.time.localeCompare(b.time));
+  const defterItems = onDate(curStr);
   const weekStart = (() => { const d = new Date(cur); const dow = (d.getDay() + 6) % 7; d.setDate(d.getDate() - dow); d.setHours(0, 0, 0, 0); return d.getTime(); })();
   const weekDays = Array.from({ length: 7 }, (_, i) => new Date(weekStart + i * ONE));
   const monCells: (number | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: dim }, (_, i) => i + 1)];
@@ -174,6 +148,33 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
     setCalView("gun");
     setQ("");
   };
+
+  // Hızlı İşlemler kartı — Gün görünümünde deftere, Hafta/Ay'da takvim hücresine sürüklenir
+  const HizliIslemler = () => (
+    <div className="card p-4">
+      <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-ink"><Plus size={14} className="text-neon-blue" /> Hızlı İşlemler</h2>
+      <p className="mb-2.5 text-[11px] text-muted">Tıkla ya da <b className="text-ink">{calView === "gun" ? "deftere" : "takvime"} sürükleyip bırak</b> — seçili güne eklenir ve deftere yazılır.</p>
+      <div className="grid grid-cols-2 gap-2">
+        {[
+          { label: "Görev Ekle", icon: CheckSquare, kind: "gorev" },
+          { label: "Etkinlik Ekle", icon: Sun, kind: "etkinlik" },
+          { label: "Not Ekle", icon: FileText, kind: "not" },
+          { label: "Dosya Ekle", icon: Folder, kind: "dosya" },
+          { label: "Talep Ekle", icon: AlertCircle, kind: "talep" },
+          { label: "Tutanak", icon: Bell, kind: "tutanak" },
+        ].map((a) => (
+          <button key={a.label} onClick={() => openKind(a.kind)}
+            draggable={a.kind !== "tutanak"}
+            onDragStart={() => setDragKind(a.kind)}
+            onDragEnd={() => { setDragKind(null); setDropDay(null); }}
+            className={`flex items-center gap-2 rounded-xl border border-line bg-base/40 px-3 py-2.5 text-left text-sm font-medium text-ink transition hover:-translate-y-0.5 hover:border-neon-blue/40 hover:text-neon-blue ${a.kind !== "tutanak" ? "cursor-grab active:cursor-grabbing" : ""} ${dragKind === a.kind ? "opacity-40" : ""}`}>
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-neon-blue/10 text-neon-blue"><a.icon size={15} /></span>
+            {a.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-4 p-4 md:p-6">
@@ -246,11 +247,17 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
         </div>
       )}
 
-      {calView !== "liste" && (
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-          {/* Sol: Gün (planner) / Hafta / Ay takvimi */}
-          <section className="card min-w-0 p-6">
-            {calView === "gun" && (<>
+      {/* GÜN — büyük Defter (solda) + Hızlı İşlemler (sağda) */}
+      {calView === "gun" && (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+          {/* Defter */}
+          <section
+            onDragOver={dragKind ? (e) => { e.preventDefault(); setDropDay(curStr); } : undefined}
+            onDragLeave={() => setDropDay((p) => (p === curStr ? null : p))}
+            onDrop={dragKind ? (e) => { e.preventDefault(); openKind(dragKind, { date: curStr }); setDragKind(null); setDropDay(null); } : undefined}
+            className={`card min-w-0 p-6 transition ${dropDay === curStr && dragKind ? "ring-2 ring-neon-blue/50" : ""}`}
+          >
+            {/* Defter başlığı — büyük tarih + ay + gün + hava, sağda mini ay */}
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-5">
               <div className="flex items-start gap-5">
                 <span className="font-serif text-7xl font-bold leading-[0.85] text-ink">{curDate.getDate()}</span>
@@ -276,41 +283,57 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
               </div>
             </div>
 
-            {/* Zaman çizelgesi */}
-            <div className="relative mt-4" style={{ height: (END_H - START_H) * PXH }}
-              onDragOver={dragKind ? (e) => { e.preventDefault(); const rect = e.currentTarget.getBoundingClientRect(); let h = START_H + (e.clientY - rect.top) / PXH; h = Math.max(START_H, Math.min(END_H, Math.round(h * 2) / 2)); setDropH(h); } : undefined}
-              onDragLeave={() => setDropH(null)}
-              onDrop={dragKind ? onTimelineDrop : undefined}>
-              {/* Sürükle-bırak saat göstergesi */}
-              {dragKind && dropH != null && (
-                <div className="pointer-events-none absolute left-11 right-2 z-20 flex items-center gap-2" style={{ top: (dropH - START_H) * PXH }}>
-                  <span className="rounded bg-neon-blue px-1.5 py-0.5 text-[10px] font-bold text-white shadow">{pad(Math.floor(dropH))}:{pad((dropH % 1) * 60)}</span>
-                  <div className="h-0.5 flex-1 rounded bg-neon-blue" />
-                </div>
-              )}
-              {Array.from({ length: END_H - START_H + 1 }, (_, i) => START_H + i).map((h) => (
-                <div key={h} className="absolute left-0 right-0 flex items-start gap-2" style={{ top: (h - START_H) * PXH }}>
-                  <span className="w-11 shrink-0 text-[11px] text-faint">{pad(h)}:00</span>
-                  <div className="h-px flex-1 bg-line/70" />
+            {/* Defter satırları — bu güne düşen tüm hareketler (tip etiketli) */}
+            <div className="mt-4 flex items-center justify-between">
+              <h2 className="flex items-center gap-1.5 text-sm font-bold text-ink"><BookOpen size={15} className="text-neon-blue" /> Günün Defteri <span className="text-[11px] font-normal text-muted">({defterItems.length} kayıt)</span></h2>
+              <button onClick={openNew} className="flex items-center gap-1 rounded-lg border border-line px-2 py-1 text-xs text-muted transition hover:bg-elevated hover:text-ink"><Plus size={12} /> Kayıt</button>
+            </div>
+            <div className="mt-3 space-y-1.5">
+              {defterItems.map((e) => (
+                <div key={e.key} className="group flex w-full items-center gap-3 rounded-lg border border-line bg-base/40 px-3 py-2.5 transition hover:border-neon-blue/40 hover:bg-elevated">
+                  <button onClick={() => setModal({ mod: e.mod, rec: e.rec })} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                    <span className="w-20 shrink-0 rounded px-1.5 py-0.5 text-center text-[9px] font-bold tracking-wide" style={{ background: `${e.color}1f`, color: e.color }}>{TIP_META[e.tip]?.kisa || e.tip}</span>
+                    {e.time ? <span className="w-12 shrink-0 text-xs text-faint nums">{e.time}</span> : <span className="w-12 shrink-0" />}
+                    <span className="flex-1 truncate text-[14px] text-ink">{e.title}</span>
+                  </button>
+                  <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+                    <button onClick={() => onayaGonder(e)} title="Onaya gönder" className="grid h-7 w-7 place-items-center rounded-lg text-faint transition hover:bg-neon-blue/10 hover:text-neon-blue"><CheckCircle2 size={15} /></button>
+                    <button onClick={() => silDefter(e)} title="Sil" className="grid h-7 w-7 place-items-center rounded-lg text-faint transition hover:bg-critical/10 hover:text-critical"><Trash2 size={15} /></button>
+                  </div>
                 </div>
               ))}
-              {blocks.map((b) => {
-                const Icon = iconFor(b.title + " " + b.sub);
-                const top = (b.s - START_H) * PXH + 2;
-                const height = Math.max(46, (b.e - b.s) * PXH - 4);
-                return (
-                  <button key={b.key} onClick={() => setModal({ mod: b.mod, rec: b.rec })} className="absolute left-14 right-2 overflow-hidden rounded-lg border-l-4 px-2.5 py-1.5 text-left shadow-sm transition hover:shadow"
-                    style={{ top, height, borderLeftColor: b.color, background: `${b.color}12` }}>
-                    <div className="flex items-center gap-1.5 text-[11px] font-medium leading-tight" style={{ color: b.color }}><Icon size={12} className="shrink-0" /> {pad(Math.floor(b.s))}:{pad(Math.round((b.s % 1) * 60))} – {pad(Math.floor(b.e))}:{pad(Math.round((b.e % 1) * 60))}</div>
-                    <p className="truncate text-sm font-semibold leading-tight text-ink">{b.title}</p>
-                    {b.sub && height > 52 ? <p className="truncate text-[11px] leading-tight text-muted">{b.sub}</p> : null}
-                  </button>
-                );
-              })}
-              {blocks.length === 0 && <p className="absolute inset-x-0 top-1/2 text-center text-sm text-muted">Bu gün için planlı etkinlik yok.</p>}
+              {defterItems.length === 0 && (
+                <div className="rounded-lg border border-dashed border-line py-10 text-center">
+                  <BookOpen size={22} className="mx-auto mb-2 text-faint" />
+                  <p className="text-sm text-muted">Bu güne düşen kayıt yok.</p>
+                  <p className="mt-0.5 text-[11px] text-faint">Hızlı İşlemler'den sürükleyip bırakın ya da aşağıya not yazın.</p>
+                </div>
+              )}
             </div>
-            </>)}
 
+            {/* Deftere hızlı not yaz */}
+            <div className="mt-4 flex items-center gap-2 border-t border-line pt-4">
+              <FileText size={15} className="shrink-0 text-neon-blue" />
+              <input
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") saveNote(); }}
+                placeholder="Deftere not yaz…"
+                className="flex-1 rounded-lg border border-line bg-panel px-3 py-2 text-sm text-ink outline-none transition focus:border-neon-blue focus:ring-2 focus:ring-neon-blue/20"
+              />
+              <button onClick={saveNote} disabled={!noteText.trim()} className="flex items-center gap-1 rounded-lg bg-neon-blue px-3 py-2 text-sm font-medium text-white transition hover:bg-neon-blue/90 disabled:opacity-40"><Send size={14} /> Ekle</button>
+            </div>
+          </section>
+
+          {/* Sağ: Hızlı İşlemler */}
+          <div className="space-y-4"><HizliIslemler /></div>
+        </div>
+      )}
+
+      {/* HAFTA / AY — takvim (solda) + Hızlı İşlemler (sağda) */}
+      {(calView === "hafta" || calView === "ay") && (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <section className="card min-w-0 p-6">
             {calView === "hafta" && (
               <div className="grid grid-cols-7 gap-1">
                 {weekDays.map((d, i) => { const s = dstr(d); const items = onDate(s); const isT = s === td;
@@ -342,73 +365,11 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
             )}
           </section>
 
-          {/* Sağ: Görevler + Notlar + Dosyalar (her görünümde sabit) */}
-          <div className="space-y-4">
-            <div className="card p-4">
-              <div className="mb-2 flex items-center justify-between">
-                <h2 className="text-sm font-bold text-ink">Bugünün Görevleri</h2>
-                <button onClick={openNew} className="flex items-center gap-1 rounded-lg border border-line px-2 py-1 text-xs text-muted transition hover:bg-elevated hover:text-ink"><Plus size={12} /> Ekle</button>
-              </div>
-              <p className="text-[11px] text-muted">{done}/{gorevler.length} tamamlandı</p>
-              <div className="mt-1.5 mb-3 h-1.5 overflow-hidden rounded-full bg-elevated"><div className="h-full rounded-full bg-good" style={{ width: `${pct}%` }} /></div>
-              <div className="space-y-1">
-                {gorevler.map((r) => {
-                  const d = String(r.durum) === "Tamamlandı";
-                  return (
-                    <div key={r.id} className="flex items-center gap-2 rounded-lg px-1.5 py-1 transition hover:bg-elevated">
-                      <button onClick={() => toggle(r)} className={`grid h-4 w-4 shrink-0 place-items-center rounded border ${d ? "border-good bg-good text-white" : "border-line"}`}>{d && <CheckSquare size={10} />}</button>
-                      <button onClick={() => setModal({ mod: ajMod!, rec: r })} className={`flex-1 truncate text-left text-sm ${d ? "text-faint line-through" : "text-ink"}`}>{String(r.baslik)}</button>
-                      <span className="text-[11px] text-faint nums">{String(r.saat || "")}</span>
-                    </div>
-                  );
-                })}
-                {gorevler.length === 0 && <p className="py-3 text-center text-xs text-faint">Bugün için görev yok.</p>}
-              </div>
-            </div>
-
-            {/* Günün Kayıtları — bu güne düşen not / görev / onay / talep / etkinlik / tutanak (tip etiketli) */}
-            <div className="card p-4">
-              <h2 className="mb-2.5 flex items-center gap-1.5 text-sm font-bold text-ink"><Bell size={14} className="text-neon-blue" /> Günün Kayıtları <span className="text-[11px] font-normal text-muted">({onDate(curStr).length})</span></h2>
-              <div className="space-y-1">
-                {onDate(curStr).map((e) => (
-                  <button key={e.key} onClick={() => setModal({ mod: e.mod, rec: e.rec })} className="flex w-full items-center gap-2 rounded-lg border border-line bg-base/40 px-2.5 py-1.5 text-left transition hover:border-neon-blue/40">
-                    <span className="w-14 shrink-0 rounded px-1 py-0.5 text-center text-[8px] font-bold tracking-wide" style={{ background: `${e.color}1f`, color: e.color }}>{TIP_META[e.tip]?.kisa || e.tip}</span>
-                    {e.time ? <span className="shrink-0 text-[10px] text-faint nums">{e.time}</span> : null}
-                    <span className="flex-1 truncate text-[13px] text-ink">{e.title}</span>
-                  </button>
-                ))}
-                {onDate(curStr).length === 0 && <p className="py-3 text-center text-xs text-faint">Bu güne düşen kayıt yok.</p>}
-              </div>
-            </div>
-
-            {/* Hızlı İşlemler — not / görev / etkinlik / dosya / talep ekle (tıkla ya da takvime sürükle) */}
-            <div className="card p-4">
-              <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-ink"><Plus size={14} className="text-neon-blue" /> Hızlı İşlemler</h2>
-              <p className="mb-2.5 text-[11px] text-muted">Tıkla ya da <b className="text-ink">takvime sürükleyip bırak</b> — bırakılan gün/saate eklenir.</p>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { label: "Görev Ekle", icon: CheckSquare, kind: "gorev" },
-                  { label: "Etkinlik Ekle", icon: Sun, kind: "etkinlik" },
-                  { label: "Not Ekle", icon: FileText, kind: "not" },
-                  { label: "Dosya Ekle", icon: Folder, kind: "dosya" },
-                  { label: "Talep Ekle", icon: AlertCircle, kind: "talep" },
-                  { label: "Tutanak", icon: Bell, kind: "tutanak" },
-                ].map((a) => (
-                  <button key={a.label} onClick={() => openKind(a.kind)}
-                    draggable={a.kind !== "tutanak"}
-                    onDragStart={() => setDragKind(a.kind)}
-                    onDragEnd={() => { setDragKind(null); setDropH(null); setDropDay(null); }}
-                    className={`flex items-center gap-2 rounded-xl border border-line bg-base/40 px-3 py-2.5 text-left text-sm font-medium text-ink transition hover:-translate-y-0.5 hover:border-neon-blue/40 hover:text-neon-blue ${a.kind !== "tutanak" ? "cursor-grab active:cursor-grabbing" : ""} ${dragKind === a.kind ? "opacity-40" : ""}`}>
-                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-neon-blue/10 text-neon-blue"><a.icon size={15} /></span>
-                    {a.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+          <div className="space-y-4"><HizliIslemler /></div>
         </div>
       )}
 
+      {/* AJANDA (liste) — tüm tarihli kayıtlar */}
       {calView === "liste" && (
         <section className="card p-4"><div className="space-y-3">
           {Object.entries(allEntries.reduce<Record<string, typeof allEntries>>((acc, e) => { (acc[e.date] = acc[e.date] || []).push(e); return acc; }, {})).sort().map(([date, items]) => (

@@ -36,7 +36,7 @@ function EditList({ items, onChange, ph }: { items: string[]; onChange: (a: stri
           <button onClick={() => onChange(items.filter((_, j) => j !== i))} className="grid h-6 w-6 shrink-0 place-items-center rounded text-ink/40 hover:bg-black/10 hover:text-critical"><X size={13} /></button>
         </div>
       ))}
-      <button onClick={() => onChange([...items, ""])} className="flex items-center gap-1 rounded-md border border-dashed border-ink/30 px-2 py-0.5 text-[13px] text-ink/60 transition hover:border-neon-blue hover:text-neon-blue"><Plus size={12} /> {ph}</button>
+      {items.length === 0 && <p className="text-[13px] text-ink/40">{ph} → Hızlı Ekle'den</p>}
     </div>
   );
 }
@@ -49,6 +49,8 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
   const [edit, setEdit] = useState(false);
   const [q, setQ] = useState("");
   const [pendingNo, setPendingNo] = useState<string | null>(null);
+  // Hızlı Ekle — sürüklenen bölüm
+  const [dragSec, setDragSec] = useState<string | null>(null);
 
   // Yeni oluşturulan tutanağı seç
   useEffect(() => {
@@ -114,6 +116,22 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
   const setAks = (rows: typeof aksArr) => UP({ aksiyonlar: rows.map((r) => `${r.is} | ${r.sor} | ${r.trh} | ${r.drm}`).join("\n") });
   const setSurec = (rows: typeof surecArr) => UP({ surec: rows.map((r) => `${r.ad}:${r.sure}`).join(", ") });
 
+  // Hızlı Ekle bölümleri — her biri ilgili deftere boş bir madde ekler (düzenleme modunu açar)
+  const SECTIONS = [
+    { key: "katilimcilar", label: "Katılımcı", icon: Users, c: "#93C5FD", add: () => setL("katilimcilar", [...katilimcilar, ""]) },
+    { key: "amac", label: "Amaç", icon: Target, c: "#FDE68A", add: () => setL("amac", [...amac, ""]) },
+    { key: "gundem", label: "Gündem", icon: ClipboardList, c: "#60A5FA", add: () => setL("gundem", [...gundem, ""]) },
+    { key: "onemli", label: "Önemli Not", icon: AlertTriangle, c: "#F9A8D4", add: () => setL("onemli_notlar", [...onemli, ""]) },
+    { key: "gorusulen", label: "Görüşülen", icon: ClipboardList, c: "#86EFAC", add: () => setL("gorusulen", [...gorusulen, ""]) },
+    { key: "kararlar", label: "Karar", icon: Gavel, c: "#86EFAC", add: () => setL("kararlar", [...kararlar, ""]) },
+    { key: "hedefler", label: "Hedef", icon: Target, c: "#FCA5A5", add: () => setC("hedefler", [...hedefler, ""]) },
+    { key: "surec", label: "Aşama", icon: ClipboardList, c: "#93C5FD", add: () => setSurec([...surecArr, { ad: "", sure: "" }]) },
+    { key: "sorumlular", label: "Sorumlu", icon: Users, c: "#F9A8D4", add: () => setL("sorumlular", [...sorumlular, ""]) },
+    { key: "riskler", label: "Risk", icon: AlertTriangle, c: "#FDE68A", add: () => setL("riskler", [...riskler, ""]) },
+    { key: "aksiyonlar", label: "Aksiyon", icon: CheckCircle2, c: "#86EFAC", add: () => setAks([...aksArr, { is: "", sor: "", trh: "", drm: "Bekliyor" }]) },
+  ];
+  const quickAdd = (key: string) => { setEdit(true); SECTIONS.find((s) => s.key === key)?.add(); };
+
   const inp = "rounded border border-black/15 bg-white/80 px-2 py-0.5 text-ink outline-none focus:border-neon-blue";
   const SectionTitle = ({ icon: Icon, children, c }: { icon: typeof Target; children: ReactNode; c: string }) => (
     <h3 className="mb-2 flex items-center gap-2 text-[22px] font-bold text-ink">
@@ -123,7 +141,7 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
   );
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-4 p-4 md:p-6">
+    <div className="mx-auto max-w-[1760px] space-y-4 p-4 md:p-6">
       {/* Üst bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -154,7 +172,10 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
 
       <div className="flex items-stretch">
         {/* Defter */}
-        <div className="relative min-w-0 flex-1 overflow-hidden rounded-l-xl rounded-r-sm text-ink shadow-[0_10px_30px_rgba(0,0,0,0.18)]"
+        <div
+          onDragOver={dragSec ? (e) => e.preventDefault() : undefined}
+          onDrop={dragSec ? (e) => { e.preventDefault(); quickAdd(dragSec); setDragSec(null); } : undefined}
+          className={`relative min-w-0 flex-1 overflow-hidden rounded-l-xl rounded-r-sm text-ink shadow-[0_10px_30px_rgba(0,0,0,0.18)] transition ${dragSec ? "ring-4 ring-neon-blue/50" : ""}`}
           style={{ fontFamily: HAND, background: "#FFFDF4", backgroundImage: "repeating-linear-gradient(#FFFDF4 0 30px, #DCE6EF 30px 31px)", border: "1px solid #E7E0CC" }}>
           <div className="grid gap-0 lg:grid-cols-2">
             {/* ── SOL SAYFA ── */}
@@ -249,7 +270,7 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
                         <button onClick={() => setSurec(surecArr.filter((_, j) => j !== i))} className="grid h-6 w-6 place-items-center rounded text-ink/40 hover:text-critical"><X size={13} /></button>
                       </div>
                     ))}
-                    <button onClick={() => setSurec([...surecArr, { ad: "", sure: "" }])} className="flex items-center gap-1 rounded-md border border-dashed border-ink/30 px-2 py-0.5 text-[13px] text-ink/60 hover:border-neon-blue hover:text-neon-blue"><Plus size={12} /> Aşama ekle</button>
+                    {surecArr.length === 0 && <p className="text-[13px] text-ink/40">Aşama → Hızlı Ekle'den</p>}
                   </div>
                 ) : (
                   <div className="flex flex-wrap items-start gap-1.5">{surecArr.map((s, i) => (
@@ -287,7 +308,7 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
                         <button onClick={() => setAks(aksArr.filter((_, j) => j !== i))} className="grid h-6 w-6 place-items-center rounded text-ink/40 hover:text-critical"><X size={13} /></button>
                       </div>
                     ))}
-                    <button onClick={() => setAks([...aksArr, { is: "", sor: "", trh: "", drm: "Bekliyor" }])} className="flex items-center gap-1 rounded-md border border-dashed border-ink/30 px-2 py-0.5 text-[13px] text-ink/60 hover:border-neon-blue hover:text-neon-blue"><Plus size={12} /> Aksiyon ekle</button>
+                    {aksArr.length === 0 && <p className="text-[13px] text-ink/40">Aksiyon → Hızlı Ekle'den</p>}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -303,8 +324,27 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
                 )}
               </div>
 
+              {/* Hızlı Ekle — defterin sağ altı: tıkla ya da deftere sürükle bırak */}
+              <div className="mt-6 rounded-xl border-2 border-dashed border-neon-blue/40 bg-neon-blue/5 p-3">
+                <p className="mb-2 flex items-center gap-1.5 text-[16px] font-bold text-ink" style={{ fontFamily: HAND }}>
+                  <Plus size={16} className="text-neon-blue" /> Hızlı Ekle
+                  <span className="text-[12px] font-normal text-ink/50">— tıkla ya da deftere sürükle bırak</span>
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {SECTIONS.map((s) => (
+                    <button key={s.key}
+                      draggable onDragStart={() => setDragSec(s.key)} onDragEnd={() => setDragSec(null)}
+                      onClick={() => quickAdd(s.key)}
+                      className={`flex cursor-grab items-center gap-1 rounded-full border px-2.5 py-1 text-[13px] font-semibold text-ink transition hover:-translate-y-0.5 active:cursor-grabbing ${dragSec === s.key ? "opacity-40" : ""}`}
+                      style={{ background: s.c + "44", borderColor: s.c, fontFamily: HAND }}>
+                      <s.icon size={13} /> {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {edit && (
-                <div className="mt-6 flex justify-end border-t border-dashed border-[#E3DCC6] pt-3">
+                <div className="mt-4 flex justify-end border-t border-dashed border-[#E3DCC6] pt-3">
                   <button onClick={() => { if (recs.length > 1) { deleteRecord(MOD, String(sel.id)); setSelId(null); setEdit(false); } }} className="flex items-center gap-1.5 rounded-lg border border-critical/40 px-3 py-1.5 text-sm font-medium text-critical transition hover:bg-critical/10"><Trash2 size={14} /> Bu Tutanağı Sil</button>
                 </div>
               )}

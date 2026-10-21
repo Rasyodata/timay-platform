@@ -1,14 +1,12 @@
 import { useState } from "react";
 import {
-  Clock, CheckSquare, Square, Users, Phone, Utensils, AlertCircle, ArrowRight, Clock3,
-  Heart, Search, Lightbulb, Droplet, Smile, Meh, Frown, CalendarCheck, ChevronLeft, ChevronRight,
-  FileText, BarChart3, Scale, Plus,
+  CheckSquare, Square, Users, AlertCircle, ArrowRight, Clock3,
+  Lightbulb, Droplet, Smile, Meh, Frown, CalendarCheck, ChevronLeft, ChevronRight,
+  Plus, BookOpen, Send, FileText, X, Trash2, CheckCircle2,
 } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
-import { useUsers } from "@/context/UsersContext";
 import { RecordForm } from "@/components/projects/ProjectTableCard";
 import TalepForm from "@/components/requests/TalepForm";
-import { X } from "lucide-react";
 import type { DynamicRecord } from "@/types/modules";
 import type { View } from "@/App";
 
@@ -20,38 +18,38 @@ const AY_GUN = ["Pt", "Sa", "Ça", "Pe", "Cu", "Ct", "Pz"];
 const ONE = 86400000;
 const pad = (n: number) => String(n).padStart(2, "0");
 const dstr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-const parseH = (s: unknown) => { const m = String(s).match(/(\d{1,2}):(\d{2})/); return m ? parseInt(m[1]) : NaN; };
-const PASTEL: Record<string, string> = { Mavi: "#DBEAFE", Yeşil: "#DCFCE7", Turuncu: "#FEF3C7", Kırmızı: "#FEE2E2", Mor: "#EDE9FE", Gri: "#EEF2F6" };
-const iconFor = (t: string): typeof Users => {
-  const s = t.toLocaleLowerCase("tr");
-  if (/toplant|ekip|sunum|görüşme/.test(s)) return Users;
-  if (/telefon|çağrı|ara|zoom/.test(s)) return Phone;
-  if (/öğle|yemek|mola/.test(s)) return Utensils;
-  if (/teknik|kontrol|güvenlik|test/.test(s)) return AlertCircle;
-  if (/rapor|analiz|değerlend/.test(s)) return BarChart3;
-  if (/hukuk|sözleşme|dava/.test(s)) return Scale;
-  return FileText;
+
+// Kayıt tipi → renk + kısa etiket (defterde ne olduğunu göster)
+const TIP: Record<string, { renk: string; kisa: string }> = {
+  "Görev": { renk: "#1E7A46", kisa: "GÖREV" },
+  "Etkinlik": { renk: "#0d9488", kisa: "ETKİNLİK" },
+  "Not": { renk: "#CA8A04", kisa: "NOT" },
+  "Tutanak": { renk: "#7C3AED", kisa: "TUTANAK" },
 };
 
-// Sol kenar — hızlı ekleme kısayolları (addMod → yerinde modal; view → sayfaya git)
-const SEKMELER: { label: string; renk: string; view?: View; addMod?: string }[] = [
-  { label: "+ GÖREV", renk: "#2E8B74", addMod: "mod-T-0057" },
-  { label: "+ ETKİNLİK", renk: "#0d9488", addMod: "mod-T-0060" },
-  { label: "+ NOT", renk: "#C96A86", addMod: "mod-T-0068" },
-  { label: "+ DOSYA", renk: "#D9B44A", addMod: "mod-T-0067" },
-  { label: "+ TALEP", renk: "#B5731A", addMod: "TALEP" },
-  { label: "+ TUTANAK", renk: "#5B8DB8", addMod: "mod-T-0063" },
+// Hızlı İşlemler — ilgili tabloya yerinde kayıt açar (sağ panelde; deftere sürüklenebilir)
+const SEKMELER: { label: string; renk: string; addMod: string; defaults?: Record<string, unknown> }[] = [
+  { label: "Görev", renk: "#2E8B74", addMod: "mod-T-0057" },
+  { label: "Etkinlik", renk: "#0d9488", addMod: "mod-T-0060" },
+  { label: "Görüşme", renk: "#0E7490", addMod: "mod-T-0060", defaults: { tur: "Görüşme" } },
+  { label: "Not", renk: "#C96A86", addMod: "mod-T-0068" },
+  { label: "Fikir", renk: "#CA8A04", addMod: "mod-T-0066" },
+  { label: "Tutanak", renk: "#5B8DB8", addMod: "mod-T-0063" },
+  { label: "İlaç", renk: "#9333EA", addMod: "mod-T-0057", defaults: { baslik: "İlaç — " } },
+  { label: "Dosya", renk: "#D9B44A", addMod: "mod-T-0067" },
+  { label: "Talep", renk: "#B5731A", addMod: "TALEP" },
 ];
 
 export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View) => void }) {
-  const { getModule, updateRecord } = useModules();
-  const { users } = useUsers();
+  const { getModule, updateRecord, addRecord, deleteRecord } = useModules();
   const recs = (id: string) => (getModule(id)?.records ?? []) as DynamicRecord[];
   const [cur, setCur] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); });
   const [su, setSu] = useState(4);
   const [ruh, setRuh] = useState(0);
   const [lchk, setLchk] = useState<Record<string, boolean>>({});
-  const [addModal, setAddModal] = useState<{ modId: string; baslik: string; defaults: Record<string, unknown> } | null>(null);
+  const [addModal, setAddModal] = useState<{ modId: string; baslik: string; defaults?: Record<string, unknown>; rec?: DynamicRecord } | null>(null);
+  const [noteText, setNoteText] = useState("");
+  const [dragSek, setDragSek] = useState<string | null>(null);
   const lt = (id: string) => setLchk((p) => ({ ...p, [id]: !p[id] }));
 
   const curDate = new Date(cur);
@@ -63,12 +61,14 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
   const dim = new Date(y, mo + 1, 0).getDate();
   const miniCells: (number | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: dim }, (_, i) => i + 1)];
 
-  // Günlük plan: T-0060 etkinlikleri saat bazlı
-  const ev = recs("mod-T-0060").filter((r) => String(r.tarih) === curStr && r.baslangic_saat);
-  const evByHour = (h: number) => ev.find((e) => parseH(e.baslangic_saat) === h);
-  // Bugünün görevleri: T-0057
-  const gorevler = recs("mod-T-0057").filter((r) => String(r.tarih) === curStr).sort((a, b) => String(a.saat || "").localeCompare(String(b.saat || "")));
-  const toggleGorev = (r: DynamicRecord) => updateRecord("mod-T-0057", String(r.id), { durum: String(r.durum) === "Tamamlandı" ? "Yapılacak" : "Tamamlandı" });
+  // GÜNÜN DEFTERİ — seçili güne düşen tüm hareketler (görev / etkinlik / not / tutanak)
+  const dayDefter = [
+    ...recs("mod-T-0057").filter((r) => String(r.tarih) === curStr).map((r) => ({ id: "g" + r.id, modId: "mod-T-0057", rec: r, tip: "Görev", title: String(r.baslik), time: String(r.saat || "") })),
+    ...recs("mod-T-0060").filter((r) => String(r.tarih) === curStr).map((r) => ({ id: "e" + r.id, modId: "mod-T-0060", rec: r, tip: "Etkinlik", title: String(r.baslik), time: String(r.baslangic_saat || "") })),
+    ...recs("mod-T-0068").filter((r) => r.arsiv !== true && String(r.tarih) === curStr).map((r) => ({ id: "n" + r.id, modId: "mod-T-0068", rec: r, tip: "Not", title: String(r.baslik || r.icerik || ""), time: "" })),
+    ...recs("mod-T-0063").filter((r) => String(r.tarih) === curStr).map((r) => ({ id: "t" + r.id, modId: "mod-T-0063", rec: r, tip: "Tutanak", title: String(r.toplanti || ""), time: String(r.saat || "") })),
+  ].sort((a, b) => a.time.localeCompare(b.time));
+
   // Öncelikli işler: T-0056 açık görevler, önceliğe göre
   const acikGorev = recs("mod-T-0056").filter((r) => String(r.durum) !== "Tamamlandı");
   const byOncelik = (re: RegExp) => acikGorev.filter((g) => re.test(String(g.oncelik))).slice(0, 4);
@@ -79,17 +79,28 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
   const aksiyonlar = String(tutanak?.aksiyonlar ?? "").split("\n").map((l) => l.split("|")[0].trim()).filter(Boolean).slice(0, 4);
   // Fikirler: T-0066
   const fikirler = recs("mod-T-0066").map((r) => String(r.fikir || r.baslik || "")).filter(Boolean).slice(0, 5);
-  // Önemli notlar: T-0068
-  const notlar = recs("mod-T-0068").filter((r) => r.arsiv !== true).sort((a, b) => String(b.tarih ?? "").localeCompare(String(a.tarih ?? ""))).slice(0, 4).map((r) => String(r.baslik || r.icerik || ""));
-  // Arama listesi: kişiler
-  const arama = users.slice(0, 6);
   // Yarının hedefleri: ertesi gün T-0057
   const yarin = recs("mod-T-0057").filter((r) => String(r.tarih) === nextStr).slice(0, 4).map((r) => String(r.baslik));
 
   const nav = (d: number) => setCur((c) => c + d * ONE);
   const bugun = () => { const d = new Date(); d.setHours(0, 0, 0, 0); setCur(d.getTime()); };
 
-  const Card = ({ title, icon: Icon, renk, extra, children, className }: { title: string; icon: typeof Clock; renk: string; extra?: React.ReactNode; children: React.ReactNode; className?: string }) => (
+  // Hızlı İşlem — ilgili tabloya kayıt aç (seçili güne)
+  const addSekme = (s: typeof SEKMELER[number]) => {
+    const base = s.addMod === "mod-T-0068" ? { renk: "Sarı", tarih: curStr } : { tarih: curStr };
+    setAddModal({ modId: s.addMod, baslik: s.label, defaults: { ...base, ...(s.defaults ?? {}) } });
+  };
+  // Deftere hızlı not (T-0068) — seçili güne yazılır, defterde "NOT" olarak çıkar
+  const saveNote = () => { const t = noteText.trim(); if (!t) return; addRecord("mod-T-0068", { baslik: t, renk: "Sarı", tarih: curStr }); setNoteText(""); };
+  // Kullanıcı kendi kaydını silebilir
+  const silDefter = (it: (typeof dayDefter)[number]) => deleteRecord(it.modId, String(it.rec.id));
+  // Onaya gönder — T-0045 onay kaydı oluştur, kaynağı defterden kaldır (Takvim/Ajanda/Tutanak'ta görünmez)
+  const onayaGonder = (it: (typeof dayDefter)[number]) => {
+    addRecord("mod-T-0045", { konu: it.title, tarih: curStr, durum: "Bekliyor", aciklama: `${TIP[it.tip].kisa} · ${it.title}` });
+    deleteRecord(it.modId, String(it.rec.id));
+  };
+
+  const Card = ({ title, icon: Icon, renk, extra, children, className }: { title: string; icon: typeof Users; renk: string; extra?: React.ReactNode; children: React.ReactNode; className?: string }) => (
     <div className={`overflow-hidden rounded-xl border border-black/10 bg-white/70 ${className ?? ""}`}>
       <div className="flex items-center justify-between gap-2 px-3 py-1.5" style={{ background: renk }}>
         <span className="flex items-center gap-1.5 text-[12px] font-bold tracking-wide text-ink"><Icon size={13} /> {title}</span>
@@ -121,9 +132,9 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
   ];
 
   return (
-    <div className="mx-auto max-w-[1500px] p-3 md:p-5" style={{ fontFamily: HAND }}>
+    <div className="mx-auto max-w-[1600px] p-3 md:p-5" style={{ fontFamily: HAND }}>
       {/* Tarih seçici */}
-      <div className="mb-3 flex flex-wrap items-center gap-2 md:ml-8">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <button onClick={bugun} className="rounded-lg border border-line bg-panel px-3 py-1.5 text-sm font-medium text-ink transition hover:bg-elevated" style={{ fontFamily: "inherit" }}>Bugün</button>
         <button onClick={() => nav(-1)} className="grid h-8 w-8 place-items-center rounded-lg border border-line text-muted hover:bg-elevated"><ChevronLeft size={16} /></button>
         <button onClick={() => nav(1)} className="grid h-8 w-8 place-items-center rounded-lg border border-line text-muted hover:bg-elevated"><ChevronRight size={16} /></button>
@@ -131,23 +142,9 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
         <span className="rounded-md border border-line bg-base/60 px-1.5 py-0.5 font-mono text-[10px] text-muted" title="Ajanda Hareketleri T-0078 · kaynak: T-0057, T-0060, T-0056, T-0063, T-0068, T-0076, T-0049, T-0053">T-0078 · Ajanda Hareketleri</span>
       </div>
 
-      <div className="flex items-stretch">
-        {/* Sol kenar sekmeleri */}
-        <div className="flex flex-col gap-1.5 pt-6">
-          {SEKMELER.map((s) => (
-            <button key={s.label} title={s.label}
-              onClick={() => {
-                if (s.addMod) setAddModal({ modId: s.addMod, baslik: s.label.replace("+ ", ""), defaults: s.addMod === "mod-T-0068" ? { renk: "Sarı", tarih: curStr } : { tarih: curStr } });
-                else if (s.view) onNavigate?.(s.view);
-              }}
-              className="flex min-h-[70px] w-8 items-center justify-center rounded-l-lg shadow-md transition hover:w-9" style={{ background: s.renk }}>
-              <span className="whitespace-nowrap text-[11px] font-bold tracking-wider text-white" style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}>{s.label}</span>
-            </button>
-          ))}
-        </div>
-
+      <div className="flex flex-col items-start gap-3 lg:flex-row">
         {/* Defter sayfaları */}
-        <div className="grid min-w-0 flex-1 gap-0 rounded-r-xl rounded-bl-xl shadow-[0_12px_34px_rgba(0,0,0,0.2)] lg:grid-cols-2" style={{ background: "#FBF7EC", border: "1px solid #E7DFC9" }}>
+        <div className="grid min-w-0 flex-1 gap-0 rounded-xl shadow-[0_12px_34px_rgba(0,0,0,0.2)] lg:grid-cols-2" style={{ background: "#FBF7EC", border: "1px solid #E7DFC9" }}>
           {/* ── SOL SAYFA ── */}
           <div className="space-y-3 border-b border-dashed border-[#E3DCC6] p-5 lg:border-b-0 lg:border-r">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -173,31 +170,46 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
               </div>
             </div>
 
-            <Card title="GÜNLÜK PLAN" icon={Clock} renk="#CFE4F7" extra={onNavigate && <button onClick={() => onNavigate("ajandam")} className="flex items-center gap-1 rounded-md bg-white/70 px-2 py-0.5 text-[10px] font-semibold text-ink/70 transition hover:text-neon-blue" style={{ fontFamily: "inherit" }}><Plus size={11} /> Ekle</button>}>
-              <div className="space-y-0.5">
-                {Array.from({ length: 14 }, (_, i) => 7 + i).map((h) => {
-                  const e = evByHour(h);
-                  const g = !e ? gorevler.find((x) => x.saat && parseH(x.saat) === h) : undefined;
-                  const Icon = e ? iconFor(String(e.baslik) + " " + String(e.tur || "")) : null;
-                  return (
-                    <div key={h} className="flex items-center gap-2 border-b border-black/5 py-0.5 last:border-0" style={{ minHeight: 28 }}>
-                      <span className="w-10 shrink-0 text-[11px] font-semibold text-ink/50 nums">{pad(h)}:00</span>
-                      {e ? (
-                        <div className="flex flex-1 items-center gap-1.5 rounded-md px-2 py-1" style={{ background: PASTEL[String(e.renk)] ?? "#EEF2F6" }}>
-                          {Icon ? <Icon size={13} className="shrink-0 text-ink/60" /> : null}
-                          <span className="min-w-0"><span className="block truncate text-[13px] font-medium text-ink/85">{String(e.baslik)}</span>{e.konum || e.tur ? <span className="block truncate text-[10px] text-ink/50">{String(e.konum || e.tur)}</span> : null}</span>
-                        </div>
-                      ) : g ? (
-                        <div className="flex flex-1 items-center justify-between gap-2 rounded-md bg-[#ECFCCB]/60 px-2 py-1">
-                          <span className="min-w-0 truncate text-[13px] text-ink/85">{String(g.baslik)}</span>
-                          <button onClick={() => toggleGorev(g)} className="shrink-0">{String(g.durum) === "Tamamlandı" ? <CheckSquare size={15} className="text-good" /> : <Square size={15} className="text-ink/30" />}</button>
-                        </div>
-                      ) : <div className="flex-1" />}
-                    </div>
-                  );
-                })}
+            {/* GÜNÜN DEFTERİ — saat cetveli yerine o güne düşen kayıtlar + deftere not yaz */}
+            <div
+              onDragOver={dragSek ? (e) => e.preventDefault() : undefined}
+              onDrop={dragSek ? (e) => { e.preventDefault(); const s = SEKMELER.find((x) => x.label === dragSek); if (s) addSekme(s); setDragSek(null); } : undefined}
+              className={`overflow-hidden rounded-xl border bg-white/70 transition ${dragSek ? "border-neon-blue ring-2 ring-neon-blue/40" : "border-black/10"}`}
+            >
+              <div className="flex items-center justify-between gap-2 px-3 py-1.5" style={{ background: "#CFE4F7" }}>
+                <span className="flex items-center gap-1.5 text-[12px] font-bold tracking-wide text-ink"><BookOpen size={13} /> GÜNÜN DEFTERİ <span className="font-normal text-ink/50">({dayDefter.length})</span></span>
+                <AddBtn modId="mod-T-0057" />
               </div>
-            </Card>
+              <div className="space-y-1 p-3">
+                {dayDefter.map((it) => { const m = TIP[it.tip]; return (
+                  <div key={it.id} className="group flex w-full items-center gap-2 rounded-lg border border-black/5 bg-white/60 px-2.5 py-2 transition hover:border-neon-blue/40">
+                    <button onClick={() => setAddModal({ modId: it.modId, baslik: it.tip, rec: it.rec })} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                      <span className="w-16 shrink-0 rounded px-1 py-0.5 text-center text-[8px] font-bold tracking-wide" style={{ background: `${m.renk}1f`, color: m.renk }}>{m.kisa}</span>
+                      {it.time ? <span className="w-10 shrink-0 text-[11px] text-ink/45 nums">{it.time}</span> : <span className="w-10 shrink-0" />}
+                      <span className="flex-1 truncate text-[14px] text-ink/85">{it.title}</span>
+                    </button>
+                    <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+                      <button onClick={() => onayaGonder(it)} title="Onaya gönder" className="grid h-6 w-6 place-items-center rounded text-ink/40 transition hover:bg-neon-blue/10 hover:text-neon-blue"><CheckCircle2 size={14} /></button>
+                      <button onClick={() => silDefter(it)} title="Sil" className="grid h-6 w-6 place-items-center rounded text-ink/40 transition hover:bg-critical/10 hover:text-critical"><Trash2 size={14} /></button>
+                    </div>
+                  </div>
+                ); })}
+                {dayDefter.length === 0 && (
+                  <div className="rounded-lg border border-dashed border-black/10 py-6 text-center">
+                    <BookOpen size={20} className="mx-auto mb-1.5 text-ink/30" />
+                    <p className="text-[13px] text-ink/50">Bu güne düşen kayıt yok.</p>
+                    <p className="mt-0.5 text-[11px] text-ink/35">Sağdaki Hızlı İşlemler'den sürükleyip bırakın ya da aşağıya not yazın.</p>
+                  </div>
+                )}
+                {/* Deftere not yaz */}
+                <div className="mt-2 flex items-center gap-2 border-t border-black/10 pt-2">
+                  <FileText size={14} className="shrink-0 text-neon-blue" />
+                  <input value={noteText} onChange={(e) => setNoteText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") saveNote(); }}
+                    placeholder="Deftere not yaz…" className="flex-1 rounded-lg border border-black/15 bg-white/80 px-2.5 py-1.5 text-[13px] text-ink outline-none focus:border-neon-blue" style={{ fontFamily: "inherit" }} />
+                  <button onClick={saveNote} disabled={!noteText.trim()} className="flex items-center gap-1 rounded-lg bg-neon-blue px-2.5 py-1.5 text-[13px] font-semibold text-white transition hover:brightness-110 disabled:opacity-40"><Send size={13} /> Ekle</button>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* ── SAĞ SAYFA ── */}
@@ -257,40 +269,45 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
             </div>
           </div>
         </div>
+
+        {/* Sağ panel — Hızlı İşlemler (tıkla ya da deftere sürükle) */}
+        <div className="w-full shrink-0 lg:w-56">
+          <div className="rounded-xl border border-black/10 bg-white/70 p-3">
+            <p className="mb-1 flex items-center gap-1.5 text-[12px] font-bold tracking-wide text-ink"><Plus size={13} className="text-neon-blue" /> HIZLI İŞLEMLER</p>
+            <p className="mb-2.5 text-[11px] text-ink/50">Tıkla ya da <b className="text-ink/70">deftere sürükle bırak</b> — seçili güne eklenir.</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {SEKMELER.map((s) => (
+                <button key={s.label}
+                  draggable onDragStart={() => setDragSek(s.label)} onDragEnd={() => setDragSek(null)}
+                  onClick={() => addSekme(s)}
+                  className={`flex cursor-grab items-center gap-1.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold text-white shadow-sm transition hover:-translate-y-0.5 active:cursor-grabbing ${dragSek === s.label ? "opacity-40" : ""}`}
+                  style={{ background: s.renk }}>
+                  <Plus size={13} className="shrink-0" /> {s.label}
+                </button>
+              ))}
+            </div>
+            {onNavigate && (
+              <button onClick={() => onNavigate("ajandam")} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-line bg-white/60 px-2.5 py-2 text-[12px] font-semibold text-ink/70 transition hover:text-neon-blue" style={{ fontFamily: "inherit" }}>
+                <BookOpen size={13} /> Takvim / Ajanda Defteri
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Alt: BUGÜN YAPILACAKLAR / ÖNEMLİ NOTLAR / ARAMA */}
-      <div className="ml-8 mt-3 grid grid-cols-1 gap-3 rounded-xl border border-[#E7DFC9] bg-[#FBF7EC] p-5 shadow-sm md:grid-cols-3" style={{ fontFamily: HAND }}>
-        <Card title="BUGÜN YAPILACAKLAR" icon={CheckSquare} renk="#CFE4F7" extra={<AddBtn modId="mod-T-0057" tarih={curStr} />}>
-          <div className="space-y-0.5">{gorevler.length ? gorevler.map((g) => <Chk key={String(g.id)} checked={String(g.durum) === "Tamamlandı"} onToggle={() => toggleGorev(g)} label={<span>{String(g.baslik)} {g.saat ? <span className="text-[10px] text-ink/45">· {String(g.saat)}</span> : null}</span>} strike />) : <Bos msg="Bu güne görev yok." />}</div>
-        </Card>
-        <Card title="ÖNEMLİ NOTLAR" icon={Heart} renk="#FBD5DE" extra={<AddBtn modId="mod-T-0068" defaults={{ renk: "Sarı" }} />}>
-          {notlar.length ? <ul className="space-y-1 text-[13px] text-ink/85">{notlar.map((x, i) => <li key={i} className="flex gap-1.5"><span className="text-ink/40">•</span>{x}</li>)}</ul> : <Bos msg="Not yok." />}
-        </Card>
-        <Card title="ARAMA / GÖRÜŞME LİSTESİ" icon={Search} renk="#CFE4F7">
-          <div className="space-y-0.5">{arama.map((u) => (
-            <button key={u.id} onClick={() => lt("c" + u.id)} className="flex w-full items-center gap-2 py-0.5 text-left">
-              <Phone size={12} className="shrink-0 text-ink/50" />
-              <span className="flex-1 text-[13px] text-ink/85">{u.name} <span className="text-[11px] text-ink/50">({u.department})</span></span>
-              {lchk["c" + u.id] ? <CheckSquare size={14} className="text-good" /> : <Square size={14} className="text-ink/30" />}
-            </button>
-          ))}</div>
-        </Card>
-      </div>
-
-      {/* Hızlı ekleme modalı — + GÖREV / + ETKİNLİK / + NOT / + DOSYA / + TALEP / + TUTANAK */}
+      {/* Hızlı ekleme / düzenleme modalı */}
       {addModal && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 py-10 font-sans backdrop-blur-sm" onClick={() => setAddModal(null)}>
           <div className="w-full max-w-2xl rounded-2xl border border-line bg-panel shadow-card animate-fade-in" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-line px-5 py-3">
-              <h3 className="text-sm font-semibold text-ink">{addModal.baslik} Ekle</h3>
+              <h3 className="text-sm font-semibold text-ink">{addModal.rec ? String(addModal.rec.baslik ?? addModal.rec.toplanti ?? addModal.baslik) : `${addModal.baslik} Ekle`}</h3>
               <button onClick={() => setAddModal(null)} className="grid h-8 w-8 place-items-center rounded-lg text-muted transition hover:bg-elevated"><X size={16} /></button>
             </div>
             <div className="p-4">
               {addModal.modId === "TALEP"
                 ? <TalepForm initial="new" onClose={() => setAddModal(null)} />
                 : getModule(addModal.modId)
-                  ? <RecordForm mod={getModule(addModal.modId)!} defaults={addModal.defaults} onClose={() => setAddModal(null)} />
+                  ? <RecordForm mod={getModule(addModal.modId)!} initial={addModal.rec} defaults={addModal.rec ? undefined : addModal.defaults} onClose={() => setAddModal(null)} />
                   : <p className="text-sm text-muted">Tablo bulunamadı.</p>}
             </div>
           </div>
