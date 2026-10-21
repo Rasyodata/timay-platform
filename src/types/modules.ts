@@ -4,7 +4,7 @@
 // ekler; sistem bu tanımdan menüyü, formu, tabloyu ve yetki matrisini üretir.
 // ─────────────────────────────────────────────────────────────────────────
 
-export type FieldType = "TEXT" | "TEXTAREA" | "NUMBER" | "DATE" | "DROPDOWN" | "BOOLEAN";
+export type FieldType = "TEXT" | "TEXTAREA" | "NUMBER" | "DATE" | "TIME" | "DROPDOWN" | "BOOLEAN";
 
 /** Alanın varsayılan görünürlüğü (field-level security). */
 export type Visibility = "EVERYONE" | "ONLY_MANAGERS" | "ONLY_ADMINS";
@@ -63,6 +63,7 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   TEXTAREA: "Uzun Metin",
   NUMBER: "Sayı",
   DATE: "Tarih",
+  TIME: "Saat",
   DROPDOWN: "Açılır Liste",
   BOOLEAN: "Evet/Hayır",
 };

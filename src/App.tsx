@@ -102,11 +102,7 @@ function DashboardShell() {
   };
 
   return (
-    <DashboardProvider>
-      <AuditProvider>
-      <UsersProvider>
-      <ModulesProvider>
-        <ProjectsProvider>
+    <>
           <div className="flex min-h-screen bg-base text-ink">
             <Sidebar
               collapsed={collapsed}
@@ -183,11 +179,7 @@ function DashboardShell() {
             </div>
           </div>
           <ToastHost />
-        </ProjectsProvider>
-      </ModulesProvider>
-      </UsersProvider>
-      </AuditProvider>
-    </DashboardProvider>
+    </>
   );
 }
 
@@ -199,7 +191,17 @@ function Gate() {
 export default function App() {
   return (
     <AuthProvider>
-      <Gate />
+      <DashboardProvider>
+      <AuditProvider>
+      <UsersProvider>
+      <ModulesProvider>
+        <ProjectsProvider>
+          <Gate />
+        </ProjectsProvider>
+      </ModulesProvider>
+      </UsersProvider>
+      </AuditProvider>
+      </DashboardProvider>
     </AuthProvider>
   );
 }

@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useUsers } from "@/context/UsersContext";
+import { ROLE_LABELS } from "@/types/modules";
 import MarketTicker from "@/components/ui/MarketTicker";
 
 const compactTRY = new Intl.NumberFormat("tr-TR", { notation: "compact", maximumFractionDigits: 1 });
@@ -250,6 +252,7 @@ function Showcase() {
 
 export default function LoginScreen() {
   const { login, justLoggedOut } = useAuth();
+  const { users, setCurrentUser } = useUsers();
   const [email, setEmail] = useState("rasyodatagrup@gmail.com");
   const [password, setPassword] = useState("15045904");
   const [showPass, setShowPass] = useState(false);
@@ -261,8 +264,13 @@ export default function LoginScreen() {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
+    // Girilen e-postaya ait aktif kullanıcı olarak gir (rolüyle birlikte)
+    const u = users.find((x) => x.active && x.email.trim().toLocaleLowerCase("tr") === email.trim().toLocaleLowerCase("tr"));
+    if (u) setCurrentUser(u.id);
     timer.current = window.setTimeout(login, 850);
   };
+  // Hızlı giriş için örnek hesaplar (aktif kullanıcılar)
+  const hesaplar = users.filter((u) => u.active).slice(0, 6);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-base text-ink">
@@ -370,8 +378,28 @@ export default function LoginScreen() {
               </button>
 
               <p className="pt-1 text-center text-[11px] text-faint">
-                Demo erişimi — bilgiler hazır, sadece <span className="text-muted">Giriş Yap</span>'a dokunun.
+                Bir hesap seç, <span className="text-muted">Giriş Yap</span>'a dokun — o rolle girersin.
               </p>
+
+              {/* Hızlı giriş — rollere göre hesaplar (normal kullanıcı / yönetici / personel vb.) */}
+              <div className="mt-2 rounded-xl border border-line bg-base/40 p-2">
+                <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wide text-faint">Hızlı giriş · rol seç</p>
+                <div className="max-h-44 space-y-1 overflow-y-auto">
+                  {hesaplar.map((u) => {
+                    const sel = email.trim().toLocaleLowerCase("tr") === u.email.toLocaleLowerCase("tr");
+                    return (
+                      <button type="button" key={u.id} onClick={() => setEmail(u.email)}
+                        className={`flex w-full items-center justify-between gap-2 rounded-lg border px-2 py-1.5 text-left transition hover:border-neon-blue/40 ${sel ? "border-neon-blue/50 bg-neon-blue/5" : "border-line bg-panel"}`}>
+                        <span className="min-w-0">
+                          <span className="block truncate text-xs font-medium text-ink">{u.name}</span>
+                          <span className="block truncate text-[10px] text-muted">{u.email}</span>
+                        </span>
+                        <span className="shrink-0 rounded-full bg-neon-blue/10 px-2 py-0.5 text-[10px] font-semibold text-neon-blue">{ROLE_LABELS[u.role]}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </form>
 
             <p className="mt-6 text-center text-[11px] text-faint lg:text-left">

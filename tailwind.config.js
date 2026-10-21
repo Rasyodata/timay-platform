@@ -44,17 +44,16 @@ export default {
         critical: "#C1292E",
       },
       fontFamily: {
-        // halimproje.com tipografisi: gövde JetBrains Mono (monospace).
+        // maxcrea.com tipografisi: gövde + başlık Montserrat (geometrik sans).
         sans: [
-          '"JetBrains Mono"',
-          "ui-monospace",
-          "SFMono-Regular",
-          "Menlo",
-          "monospace",
+          "Montserrat",
+          '"Segoe UI"',
+          "system-ui",
+          "sans-serif",
         ],
-        // Başlıklar için Inter Tight (halimproje başlık fontu).
+        // Başlıklar için de Montserrat (tek tip geometrik görünüm).
         display: [
-          '"Inter Tight"',
+          "Montserrat",
           '"Segoe UI"',
           "system-ui",
           "sans-serif",

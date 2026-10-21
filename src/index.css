@@ -13,8 +13,14 @@
     height: 100%;
   }
 
+  /* Kurumsal/profesyonel yoğunluk: temel yazı boyutunu küçült (rem-tabanlı tüm metin ölçeklenir). */
+  html {
+    font-size: 14px;
+  }
+
   body {
     @apply bg-base font-sans text-ink antialiased;
+    letter-spacing: -0.006em;
   }
 
   /* Recessive scrollbars — SAP Fiori açık tema */

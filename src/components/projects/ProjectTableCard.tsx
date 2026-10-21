@@ -127,7 +127,7 @@ export function RecordForm({ mod, initial, defaults, onClose, onSaved }: { mod: 
             ) : f.type === "TEXTAREA" ? (
               <MentionTextarea className={input} rows={3} value={String(draft[f.code] ?? "")} onChange={(v) => set(f.code, v)} />
             ) : (
-              <input className={input} type={f.type === "NUMBER" ? "number" : f.type === "DATE" ? "date" : "text"}
+              <input className={input} type={f.type === "NUMBER" ? "number" : f.type === "DATE" ? "date" : f.type === "TIME" ? "time" : "text"}
                 value={String(draft[f.code] ?? "")}
                 onChange={(e) => set(f.code, f.type === "NUMBER" ? (e.target.valueAsNumber || e.target.value) : e.target.value)} />
             )}

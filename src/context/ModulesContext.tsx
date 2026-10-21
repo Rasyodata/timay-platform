@@ -15,7 +15,7 @@ import {
 } from "@/types/modules";
 import { useAudit } from "@/context/AuditContext";
 
-const STORAGE_KEY = "timay.dynamic-modules.v66";
+const STORAGE_KEY = "timay.dynamic-modules.v67";
 
 interface NewModuleInput {
   name: string;
@@ -199,7 +199,7 @@ function specialTables(): DynamicModule[] {
         { code: "baslik", name: "Konu / Başlık", type: "TEXT", required: true, visibility: "EVERYONE" },
         { code: "danisan", name: "Danışan / Müşteri (T-0001)", type: "DROPDOWN", required: false, visibility: "EVERYONE", optionsSource: "users" },
         { code: "tarih", name: "Tarih", type: "DATE", required: true, visibility: "EVERYONE" },
-        { code: "saat", name: "Saat", type: "TEXT", required: false, visibility: "EVERYONE" },
+        { code: "saat", name: "Saat", type: "TIME", required: false, visibility: "EVERYONE" },
         { code: "sure_dk", name: "Süre (dk)", type: "NUMBER", required: false, visibility: "EVERYONE" },
         { code: "personel", name: "Sorumlu (T-0001)", type: "DROPDOWN", required: false, visibility: "EVERYONE", optionsSource: "users" },
         { code: "tur", name: "Tür", type: "DROPDOWN", required: false, visibility: "EVERYONE", options: ["Toplantı", "Yüz Yüze Görüşme", "Telefon", "Online", "Saha Ziyareti"] },
@@ -220,8 +220,8 @@ function specialTables(): DynamicModule[] {
       [
         { code: "personel", name: "Personel (T-0001)", type: "DROPDOWN", required: true, visibility: "EVERYONE", optionsSource: "users" },
         { code: "tarih", name: "Tarih", type: "DATE", required: true, visibility: "EVERYONE" },
-        { code: "giris_saat", name: "Giriş", type: "TEXT", required: false, visibility: "EVERYONE" },
-        { code: "cikis_saat", name: "Çıkış", type: "TEXT", required: false, visibility: "EVERYONE" },
+        { code: "giris_saat", name: "Giriş", type: "TIME", required: false, visibility: "EVERYONE" },
+        { code: "cikis_saat", name: "Çıkış", type: "TIME", required: false, visibility: "EVERYONE" },
         { code: "toplam_saat", name: "Toplam Saat", type: "NUMBER", required: false, visibility: "EVERYONE" },
         { code: "mesai_tipi", name: "Mesai Tipi", type: "DROPDOWN", required: false, visibility: "EVERYONE", options: ["Normal", "Fazla Mesai", "Vardiya", "Yarım Gün", "Uzaktan"] },
         { code: "durum", name: "Durum", type: "DROPDOWN", required: true, visibility: "EVERYONE", options: ["Geldi", "İzinli", "Raporlu", "Devamsız", "Resmi Tatil"] },
@@ -257,7 +257,7 @@ function specialTables(): DynamicModule[] {
       "Sekreterya telefon ve görüşme kayıtları (Randevu Sistemi tarzı) · gelen/giden · cari · takip.", "Phone",
       [
         { code: "tarih", name: "Tarih", type: "DATE", required: true, visibility: "EVERYONE" },
-        { code: "saat", name: "Saat", type: "TEXT", required: false, visibility: "EVERYONE" },
+        { code: "saat", name: "Saat", type: "TIME", required: false, visibility: "EVERYONE" },
         { code: "yon", name: "Yön", type: "DROPDOWN", required: true, visibility: "EVERYONE", options: ["Gelen", "Giden"] },
         { code: "cari", name: "Arayan / Aranan (T-0001)", type: "DROPDOWN", required: false, visibility: "EVERYONE", optionsSource: "users" },
         { code: "telefon", name: "Telefon", type: "TEXT", required: false, visibility: "EVERYONE" },
@@ -367,7 +367,7 @@ function specialTables(): DynamicModule[] {
         { code: "kategori", name: "Kategori (Etiket)", type: "DROPDOWN", required: false, visibility: "EVERYONE", options: ["İş", "Kişisel", "Toplantı", "Hatırlatma", "Acil", "Çağrı / Takip"] },
         { code: "oncelik", name: "Öncelik", type: "DROPDOWN", required: false, visibility: "EVERYONE", options: ["Düşük", "Orta", "Yüksek", "Acil"] },
         { code: "tarih", name: "Tarih", type: "DATE", required: false, visibility: "EVERYONE" },
-        { code: "saat", name: "Saat", type: "TEXT", required: false, visibility: "EVERYONE" },
+        { code: "saat", name: "Saat", type: "TIME", required: false, visibility: "EVERYONE" },
         { code: "bitis", name: "Bitiş Tarihi (süre)", type: "DATE", required: false, visibility: "EVERYONE" },
         { code: "sorumlu", name: "Sorumlu (T-0001)", type: "DROPDOWN", required: false, visibility: "EVERYONE", optionsSource: "users" },
         { code: "milestone", name: "Milestone (T-0058)", type: "DROPDOWN", required: false, visibility: "EVERYONE", optionsSource: "mod-T-0058" },
@@ -418,8 +418,8 @@ function specialTables(): DynamicModule[] {
         { code: "tarih", name: "Başlangıç Tarihi", type: "DATE", required: true, visibility: "EVERYONE" },
         { code: "bitis", name: "Bitiş Tarihi", type: "DATE", required: false, visibility: "EVERYONE" },
         { code: "tum_gun", name: "Tüm Gün", type: "BOOLEAN", required: false, visibility: "EVERYONE" },
-        { code: "baslangic_saat", name: "Başlangıç Saati", type: "TEXT", required: false, visibility: "EVERYONE" },
-        { code: "bitis_saat", name: "Bitiş Saati", type: "TEXT", required: false, visibility: "EVERYONE" },
+        { code: "baslangic_saat", name: "Başlangıç Saati", type: "TIME", required: false, visibility: "EVERYONE" },
+        { code: "bitis_saat", name: "Bitiş Saati", type: "TIME", required: false, visibility: "EVERYONE" },
         { code: "renk", name: "Renk", type: "DROPDOWN", required: false, visibility: "EVERYONE", options: ["Mavi", "Yeşil", "Turuncu", "Kırmızı", "Mor", "Gri"] },
         { code: "konum", name: "Konum", type: "TEXT", required: false, visibility: "EVERYONE" },
         { code: "katilimcilar", name: "Katılımcılar", type: "TEXT", required: false, visibility: "EVERYONE" },
@@ -483,7 +483,7 @@ function specialTables(): DynamicModule[] {
         { code: "tutanak_no", name: "Tutanak No", type: "TEXT", required: false, visibility: "EVERYONE" },
         { code: "toplanti", name: "Toplantı Konusu", type: "TEXT", required: true, visibility: "EVERYONE" },
         { code: "tarih", name: "Tarih", type: "DATE", required: false, visibility: "EVERYONE" },
-        { code: "saat", name: "Saat", type: "TEXT", required: false, visibility: "EVERYONE" },
+        { code: "saat", name: "Saat", type: "TIME", required: false, visibility: "EVERYONE" },
         { code: "yer", name: "Yer", type: "TEXT", required: false, visibility: "EVERYONE" },
         { code: "katilimcilar", name: "Katılımcılar", type: "TEXTAREA", required: false, visibility: "EVERYONE" },
         { code: "amac", name: "Toplantı Amacı", type: "TEXTAREA", required: false, visibility: "EVERYONE" },
@@ -802,7 +802,7 @@ function specialTables(): DynamicModule[] {
       [
         { code: "hareket_no", name: "Hareket No", type: "TEXT", required: false, visibility: "EVERYONE" },
         { code: "tarih", name: "Tarih", type: "DATE", required: true, visibility: "EVERYONE" },
-        { code: "saat", name: "Saat", type: "TEXT", required: false, visibility: "EVERYONE" },
+        { code: "saat", name: "Saat", type: "TIME", required: false, visibility: "EVERYONE" },
         { code: "tip", name: "Hareket Tipi", type: "DROPDOWN", required: true, visibility: "EVERYONE", options: ["Görev", "Etkinlik", "Randevu", "Toplantı", "Not", "Talep", "Termin", "İzin", "Hatırlatma"] },
         { code: "kaynak", name: "Kaynak Tablo", type: "DROPDOWN", required: true, visibility: "EVERYONE", options: ["T-0057 · Ajanda/Gündem", "T-0060 · Takvim/Etkinlik", "T-0056 · Görevler", "T-0049 · Randevu", "T-0051 · Toplantı Odası", "T-0063 · Toplantı Tutanağı", "T-0068 · Notlar", "T-0076 · Talepler", "T-0053 · İzin", "Manuel"] },
         { code: "baslik", name: "Başlık", type: "TEXT", required: true, visibility: "EVERYONE" },
