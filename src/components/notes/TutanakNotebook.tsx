@@ -116,18 +116,19 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
   const setSurec = (rows: typeof surecArr) => UP({ surec: rows.map((r) => `${r.ad}:${r.sure}`).join(", ") });
 
   // Hızlı Ekle bölümleri — her biri ilgili deftere boş bir madde ekler (düzenleme modunu açar)
+  // Not: lines()/commas() boş satırları eler; bu yüzden Hızlı Ekle boş değil görünür placeholder ekler (kullanıcı üzerine yazar).
   const SECTIONS = [
-    { key: "katilimcilar", label: "Katılımcı", icon: Users, c: "#93C5FD", add: () => setL("katilimcilar", [...katilimcilar, ""]) },
-    { key: "amac", label: "Amaç", icon: Target, c: "#FDE68A", add: () => setL("amac", [...amac, ""]) },
-    { key: "gundem", label: "Gündem", icon: ClipboardList, c: "#60A5FA", add: () => setL("gundem", [...gundem, ""]) },
-    { key: "onemli", label: "Önemli Not", icon: AlertTriangle, c: "#F9A8D4", add: () => setL("onemli_notlar", [...onemli, ""]) },
-    { key: "gorusulen", label: "Görüşülen", icon: ClipboardList, c: "#86EFAC", add: () => setL("gorusulen", [...gorusulen, ""]) },
-    { key: "kararlar", label: "Karar", icon: Gavel, c: "#86EFAC", add: () => setL("kararlar", [...kararlar, ""]) },
-    { key: "hedefler", label: "Hedef", icon: Target, c: "#FCA5A5", add: () => setC("hedefler", [...hedefler, ""]) },
-    { key: "surec", label: "Aşama", icon: ClipboardList, c: "#93C5FD", add: () => setSurec([...surecArr, { ad: "", sure: "" }]) },
-    { key: "sorumlular", label: "Sorumlu", icon: Users, c: "#F9A8D4", add: () => setL("sorumlular", [...sorumlular, ""]) },
-    { key: "riskler", label: "Risk", icon: AlertTriangle, c: "#FDE68A", add: () => setL("riskler", [...riskler, ""]) },
-    { key: "aksiyonlar", label: "Aksiyon", icon: CheckCircle2, c: "#86EFAC", add: () => setAks([...aksArr, { is: "", sor: "", trh: "", drm: "Bekliyor" }]) },
+    { key: "katilimcilar", label: "Katılımcı", icon: Users, c: "#93C5FD", add: () => setL("katilimcilar", [...katilimcilar, "Yeni katılımcı"]) },
+    { key: "amac", label: "Amaç", icon: Target, c: "#FDE68A", add: () => setL("amac", [...amac, "Yeni amaç"]) },
+    { key: "gundem", label: "Gündem", icon: ClipboardList, c: "#60A5FA", add: () => setL("gundem", [...gundem, "Yeni gündem maddesi"]) },
+    { key: "onemli", label: "Önemli Not", icon: AlertTriangle, c: "#F9A8D4", add: () => setL("onemli_notlar", [...onemli, "Yeni not"]) },
+    { key: "gorusulen", label: "Görüşülen", icon: ClipboardList, c: "#86EFAC", add: () => setL("gorusulen", [...gorusulen, "Yeni görüşülen konu"]) },
+    { key: "kararlar", label: "Karar", icon: Gavel, c: "#86EFAC", add: () => setL("kararlar", [...kararlar, "Yeni karar"]) },
+    { key: "hedefler", label: "Hedef", icon: Target, c: "#FCA5A5", add: () => setC("hedefler", [...hedefler, "Yeni hedef"]) },
+    { key: "surec", label: "Aşama", icon: ClipboardList, c: "#93C5FD", add: () => setSurec([...surecArr, { ad: "Yeni aşama", sure: "" }]) },
+    { key: "sorumlular", label: "Sorumlu", icon: Users, c: "#F9A8D4", add: () => setL("sorumlular", [...sorumlular, "Ad: Sorumluluk"]) },
+    { key: "riskler", label: "Risk", icon: AlertTriangle, c: "#FDE68A", add: () => setL("riskler", [...riskler, "Yeni risk"]) },
+    { key: "aksiyonlar", label: "Aksiyon", icon: CheckCircle2, c: "#86EFAC", add: () => setAks([...aksArr, { is: "Yeni iş", sor: "", trh: "", drm: "Bekliyor" }]) },
   ];
   const quickAdd = (key: string) => { setEdit(true); SECTIONS.find((s) => s.key === key)?.add(); };
 

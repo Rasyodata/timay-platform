@@ -17,7 +17,6 @@ const AY_GUN = ["Pt", "Sa", "Ça", "Pe", "Cu", "Ct", "Pz"];
 const ONE = 86400000;
 const pad = (n: number) => String(n).padStart(2, "0");
 const dstr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-const ILAC_VAKIT = ["Sabah", "Öğle", "Akşam"];
 
 // Kayıt tipi → renk + kısa etiket (defterde ne olduğunu göster)
 const TIP: Record<string, { renk: string; kisa: string }> = {
@@ -47,7 +46,9 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
   const [cur, setCur] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); });
   const [su, setSu] = useState(4);
   const [ruh, setRuh] = useState(0);
+  const [meds, setMeds] = useState<string[]>(["Sabah ilacı", "Akşam ilacı"]);
   const [ilac, setIlac] = useState<Record<string, boolean>>({});
+  const [ilacInput, setIlacInput] = useState("");
   const [addModal, setAddModal] = useState<{ modId: string; baslik: string; defaults?: Record<string, unknown>; rec?: DynamicRecord } | null>(null);
   const [noteText, setNoteText] = useState("");
   const [dragSek, setDragSek] = useState<string | null>(null);
@@ -97,15 +98,25 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
     </div>
   );
 
-  // Her bölüm başlığına "+ Ekle" — ilgili tabloya kayıt açar (tarih = seçili gün)
-  const AddBtn = ({ modId, defaults, tarih }: { modId: string; defaults?: Record<string, unknown>; tarih?: string }) => (
-    <button onClick={() => setAddModal({ modId, baslik: "Kayıt", defaults: { tarih: tarih ?? curStr, ...(defaults ?? {}) } })}
-      className="flex items-center gap-1 rounded-md bg-white/70 px-2 py-0.5 text-[10px] font-semibold text-ink/70 transition hover:text-neon-blue" style={{ fontFamily: "inherit" }}>
-      <Plus size={11} /> Ekle
-    </button>
-  );
+  const ilacDone = meds.filter((v) => ilac[curStr + v]).length;
+  const addIlac = () => { const t = ilacInput.trim(); if (!t) return; setMeds((p) => [...p, t]); setIlacInput(""); };
 
-  const ilacDone = ILAC_VAKIT.filter((v) => ilac[curStr + v]).length;
+  // Defteri ikiye böl (iki sayfa)
+  const mid = Math.ceil(dayDefter.length / 2);
+  const leftCol = dayDefter.slice(0, mid), rightCol = dayDefter.slice(mid);
+  const rowEl = (it: (typeof dayDefter)[number]) => { const m = TIP[it.tip]; return (
+    <div key={it.id} className="group flex w-full items-center gap-2" style={{ height: 34 }}>
+      <button onClick={() => setAddModal({ modId: it.modId, baslik: it.tip, rec: it.rec })} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+        <span className="w-16 shrink-0 rounded px-1 py-0.5 text-center text-[8px] font-bold tracking-wide" style={{ background: `${m.renk}1f`, color: m.renk }}>{m.kisa}</span>
+        {it.time ? <span className="w-10 shrink-0 text-[11px] text-ink/45 nums">{it.time}</span> : <span className="w-10 shrink-0" />}
+        <span className="flex-1 truncate text-[14px] text-ink/85">{it.title}</span>
+      </button>
+      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+        <button onClick={() => onayaGonder(it)} title="Onaya gönder" className="grid h-6 w-6 place-items-center rounded text-ink/40 transition hover:bg-neon-blue/10 hover:text-neon-blue"><CheckCircle2 size={14} /></button>
+        <button onClick={() => silDefter(it)} title="Sil" className="grid h-6 w-6 place-items-center rounded text-ink/40 transition hover:bg-critical/10 hover:text-critical"><Trash2 size={14} /></button>
+      </div>
+    </div>
+  ); };
 
   return (
     <div className="mx-auto max-w-[1600px] p-3 md:p-5" style={{ fontFamily: HAND }}>
@@ -148,28 +159,20 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
             onDrop={dragSek ? (e) => { e.preventDefault(); const s = SEKMELER.find((x) => x.label === dragSek); if (s) addSekme(s); setDragSek(null); } : undefined}
             className={`overflow-hidden rounded-xl border bg-white/70 transition ${dragSek ? "border-neon-blue ring-2 ring-neon-blue/40" : "border-black/10"}`}
           >
-            <div className="flex items-center justify-between gap-2 px-3 py-1.5" style={{ background: "#CFE4F7" }}>
+            <div className="flex items-center gap-2 px-3 py-1.5" style={{ background: "#CFE4F7" }}>
               <span className="flex items-center gap-1.5 text-[12px] font-bold tracking-wide text-ink"><BookOpen size={13} /> GÜNÜN DEFTERİ <span className="font-normal text-ink/50">({dayDefter.length})</span></span>
-              <AddBtn modId="mod-T-0057" />
             </div>
-            {/* Çizgili defter alanı */}
-            <div className="relative min-h-[520px] px-3 py-1" style={{ backgroundImage: "repeating-linear-gradient(transparent 0 33px, #D7E3EF 33px 34px)" }}>
-              {dayDefter.length === 0 && (
-                <p className="pt-2 text-center text-[12px] text-ink/35">Boş — sağdaki Hızlı İşlemler'den sürükleyip bırakın ya da aşağıya not yazın.</p>
-              )}
-              {dayDefter.map((it) => { const m = TIP[it.tip]; return (
-                <div key={it.id} className="group flex w-full items-center gap-2" style={{ height: 34 }}>
-                  <button onClick={() => setAddModal({ modId: it.modId, baslik: it.tip, rec: it.rec })} className="flex min-w-0 flex-1 items-center gap-2 text-left">
-                    <span className="w-16 shrink-0 rounded px-1 py-0.5 text-center text-[8px] font-bold tracking-wide" style={{ background: `${m.renk}1f`, color: m.renk }}>{m.kisa}</span>
-                    {it.time ? <span className="w-10 shrink-0 text-[11px] text-ink/45 nums">{it.time}</span> : <span className="w-10 shrink-0" />}
-                    <span className="flex-1 truncate text-[14px] text-ink/85">{it.title}</span>
-                  </button>
-                  <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
-                    <button onClick={() => onayaGonder(it)} title="Onaya gönder" className="grid h-6 w-6 place-items-center rounded text-ink/40 transition hover:bg-neon-blue/10 hover:text-neon-blue"><CheckCircle2 size={14} /></button>
-                    <button onClick={() => silDefter(it)} title="Sil" className="grid h-6 w-6 place-items-center rounded text-ink/40 transition hover:bg-critical/10 hover:text-critical"><Trash2 size={14} /></button>
-                  </div>
-                </div>
-              ); })}
+            {/* Çizgili defter — iki sayfa (ikiye bölünmüş) */}
+            <div className="grid gap-0 md:grid-cols-2">
+              <div className="relative min-h-[520px] border-dashed border-black/10 px-3 py-1 md:border-r" style={{ backgroundImage: "repeating-linear-gradient(transparent 0 33px, #D7E3EF 33px 34px)" }}>
+                {dayDefter.length === 0 && (
+                  <p className="pt-2 text-center text-[12px] text-ink/35">Boş — sağdaki Hızlı İşlemler'den sürükleyip bırakın ya da aşağıya not yazın.</p>
+                )}
+                {leftCol.map(rowEl)}
+              </div>
+              <div className="relative min-h-[520px] px-3 py-1" style={{ backgroundImage: "repeating-linear-gradient(transparent 0 33px, #D7E3EF 33px 34px)" }}>
+                {rightCol.map(rowEl)}
+              </div>
             </div>
             {/* Deftere not yaz */}
             <div className="flex items-center gap-2 border-t border-black/10 bg-white/60 p-3">
@@ -218,14 +221,23 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
         </Card>
         <Card title="İLAÇ TAKİBİ" icon={Pill} renk="#EDE4FB">
           <div className="space-y-0.5">
-            {ILAC_VAKIT.map((v) => { const k = curStr + v; const on = !!ilac[k]; return (
-              <button key={v} onClick={() => setIlac((p) => ({ ...p, [k]: !p[k] }))} className="flex w-full items-center gap-2 py-0.5 text-left">
-                {on ? <CheckSquare size={15} className="shrink-0 text-good" /> : <Square size={15} className="shrink-0 text-ink/30" />}
-                <span className={`text-[13px] ${on ? "text-ink/40 line-through" : "text-ink/85"}`}>{v} dozu</span>
-              </button>
+            {meds.map((v) => { const k = curStr + v; const on = !!ilac[k]; return (
+              <div key={v} className="group flex items-center gap-2 py-0.5">
+                <button onClick={() => setIlac((p) => ({ ...p, [k]: !p[k] }))} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                  {on ? <CheckSquare size={15} className="shrink-0 text-good" /> : <Square size={15} className="shrink-0 text-ink/30" />}
+                  <span className={`truncate text-[13px] ${on ? "text-ink/40 line-through" : "text-ink/85"}`}>{v}</span>
+                </button>
+                <button onClick={() => setMeds((p) => p.filter((x) => x !== v))} className="shrink-0 text-ink/30 opacity-0 transition hover:text-critical group-hover:opacity-100"><X size={12} /></button>
+              </div>
             ); })}
+            {meds.length === 0 && <p className="py-1 text-[12px] text-ink/40">İlaç ekleyin.</p>}
           </div>
-          <p className="mt-1 text-[12px] text-ink/70">{ilacDone} / {ILAC_VAKIT.length} alındı</p>
+          <div className="mt-1.5 flex items-center gap-1">
+            <input value={ilacInput} onChange={(e) => setIlacInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addIlac(); }}
+              placeholder="İlaç ekle…" className="min-w-0 flex-1 rounded border border-black/15 bg-white/80 px-2 py-1 text-[12px] text-ink outline-none focus:border-neon-blue" style={{ fontFamily: "inherit" }} />
+            <button onClick={addIlac} disabled={!ilacInput.trim()} className="grid h-7 w-7 shrink-0 place-items-center rounded text-white transition disabled:opacity-40" style={{ background: "#9333EA" }}><Plus size={14} /></button>
+          </div>
+          <p className="mt-1 text-[12px] text-ink/70">{ilacDone} / {meds.length} alındı</p>
         </Card>
       </div>
 
