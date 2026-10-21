@@ -116,7 +116,7 @@ function DashboardShell() {
             <div className="flex min-w-0 flex-1 flex-col">
               <Navbar onMenu={() => setMobileOpen(true)} onNavigate={navigate} view={view} activeWs={activeWs} />
               <main
-                className={`flex-1 overflow-x-hidden${["ajandam", "ajanda", "gorev-yonetimi", "onaylar", "users", "roles", "notlar", "tutanak", "dosya-kutuphanesi"].includes(view) ? " dense-zoom" : ""}`}
+                className={`flex-1 overflow-x-hidden${["ajandam", "ajanda", "planlayici", "gorev-yonetimi", "onaylar", "users", "roles", "notlar", "tutanak", "dosya-kutuphanesi"].includes(view) ? " dense-zoom" : ""}`}
               >
                 {view === "finans-merkezi" && <FinansMerkezi onNavigate={navigate} />}
                 {view === "karar-merkezi" && <KararMerkezi onNavigate={navigate} />}

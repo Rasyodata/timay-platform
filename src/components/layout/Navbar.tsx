@@ -262,18 +262,18 @@ export default function Navbar({ onMenu, onNavigate, view, activeWs }: NavbarPro
       </button>
 
       {/* Ana gezinme sekmeleri (üst bar) */}
-      <nav className="flex min-w-0 items-center gap-1 overflow-x-auto">
+      <nav className="flex min-w-0 items-center gap-0.5 overflow-x-auto xl:gap-1">
         {TABS.map((t) => (
           <button
             key={t.label}
             onClick={() => onNavigate(t.view)}
-            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium transition xl:px-3 ${
               t.active ? "bg-neon-blue/15 text-ink shadow-[inset_0_0_0_1px_rgba(59,130,246,0.3)]" : "text-muted hover:bg-elevated hover:text-ink"
             }`}
           >
-            <t.icon size={15} />
+            <t.icon size={15} className="shrink-0" />
             <span className="whitespace-nowrap">{t.label}</span>
-            {t.kod && <span className="rounded border border-line bg-base/60 px-1 font-mono text-[9px] leading-tight text-faint">{t.kod}</span>}
+            {t.kod && <span className="hidden rounded border border-line bg-base/60 px-1 font-mono text-[9px] leading-tight text-faint 2xl:inline-block">{t.kod}</span>}
             {t.badge != null && t.badge > 0 && (
               <span className="grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold text-white" style={{ background: "#C1292E" }}>{t.badge}</span>
             )}

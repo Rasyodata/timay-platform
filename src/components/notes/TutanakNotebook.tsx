@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Users, MapPin, ClipboardList, Target, Gavel, AlertTriangle, CheckSquare, Square,
   CheckCircle2, Plus, Pencil, Check, ChevronLeft, ChevronRight, Search, X, Trash2,
@@ -22,17 +22,26 @@ const DURUM_RENK: Record<string, { bg: string; tx: string }> = {
 
 const lines = (v: unknown) => String(v ?? "").split("\n").map((s) => s.trim()).filter(Boolean);
 const commas = (v: unknown) => String(v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+// Düzenleme için kayıpsız bölme (trim/filter YOK) — yazarken dizi yeniden indekslenmesin, harfler birleşmesin
+const nlRaw = (v: unknown) => { const s = String(v ?? ""); return s.length ? s.split("\n") : []; };
+const cmRaw = (v: unknown) => { const s = String(v ?? ""); return s.length ? s.split(", ") : []; };
 const dmy = (iso: string) => (iso ? String(iso).split("-").reverse().join(".") : "");
 
-// Satır-içi düzenlenebilir madde listesi (\n ile saklanır)
-function EditList({ items, onChange, ph }: { items: string[]; onChange: (a: string[]) => void; ph: string }) {
+// Satır-içi düzenlenebilir madde listesi — YEREL state tutar; yazarken storage'dan türetip
+// yeniden indekslemez (harfler birleşmez, tek madde silinirken kaybolmaz). Sadece dış değişiklikte senkronize olur.
+function EditList({ value, onChange, ph, sep = "\n" }: { value: string; onChange: (v: string) => void; ph: string; sep?: string }) {
+  const split = (s: string) => (s.length ? s.split(sep) : []);
+  const [items, setItems] = useState<string[]>(() => split(value));
+  const last = useRef(value);
+  useEffect(() => { if (value !== last.current) { setItems(split(value)); last.current = value; } }, [value]);
+  const push = (next: string[]) => { setItems(next); const j = next.join(sep); last.current = j; onChange(j); };
   return (
     <div className="space-y-1">
       {items.map((it, i) => (
         <div key={i} className="flex items-center gap-1">
-          <input value={it} onChange={(e) => onChange(items.map((x, j) => (j === i ? e.target.value : x)))} placeholder={ph}
+          <input value={it} onChange={(e) => push(items.map((x, j) => (j === i ? e.target.value : x)))} placeholder={ph}
             className="min-w-0 flex-1 rounded border border-black/15 bg-white/80 px-2 py-0.5 text-[15px] text-ink outline-none focus:border-neon-blue" style={{ fontFamily: HAND }} />
-          <button onClick={() => onChange(items.filter((_, j) => j !== i))} className="grid h-6 w-6 shrink-0 place-items-center rounded text-ink/40 hover:bg-black/10 hover:text-critical"><X size={13} /></button>
+          <button onClick={() => push(items.filter((_, j) => j !== i))} className="grid h-6 w-6 shrink-0 place-items-center rounded text-ink/40 hover:bg-black/10 hover:text-critical"><X size={13} /></button>
         </div>
       ))}
       {items.length === 0 && <p className="text-[13px] text-ink/40">{ph} → Hızlı Ekle'den</p>}
@@ -118,16 +127,16 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
   // Hızlı Ekle bölümleri — her biri ilgili deftere boş bir madde ekler (düzenleme modunu açar)
   // Not: lines()/commas() boş satırları eler; bu yüzden Hızlı Ekle boş değil görünür placeholder ekler (kullanıcı üzerine yazar).
   const SECTIONS = [
-    { key: "katilimcilar", label: "Katılımcı", icon: Users, c: "#93C5FD", add: () => setL("katilimcilar", [...katilimcilar, "Yeni katılımcı"]) },
-    { key: "amac", label: "Amaç", icon: Target, c: "#FDE68A", add: () => setL("amac", [...amac, "Yeni amaç"]) },
-    { key: "gundem", label: "Gündem", icon: ClipboardList, c: "#60A5FA", add: () => setL("gundem", [...gundem, "Yeni gündem maddesi"]) },
-    { key: "onemli", label: "Önemli Not", icon: AlertTriangle, c: "#F9A8D4", add: () => setL("onemli_notlar", [...onemli, "Yeni not"]) },
-    { key: "gorusulen", label: "Görüşülen", icon: ClipboardList, c: "#86EFAC", add: () => setL("gorusulen", [...gorusulen, "Yeni görüşülen konu"]) },
-    { key: "kararlar", label: "Karar", icon: Gavel, c: "#86EFAC", add: () => setL("kararlar", [...kararlar, "Yeni karar"]) },
-    { key: "hedefler", label: "Hedef", icon: Target, c: "#FCA5A5", add: () => setC("hedefler", [...hedefler, "Yeni hedef"]) },
+    { key: "katilimcilar", label: "Katılımcı", icon: Users, c: "#93C5FD", add: () => setL("katilimcilar", [...nlRaw(sel.katilimcilar), "Yeni katılımcı"]) },
+    { key: "amac", label: "Amaç", icon: Target, c: "#FDE68A", add: () => setL("amac", [...nlRaw(sel.amac), "Yeni amaç"]) },
+    { key: "gundem", label: "Gündem", icon: ClipboardList, c: "#60A5FA", add: () => setL("gundem", [...nlRaw(sel.gundem), "Yeni gündem maddesi"]) },
+    { key: "onemli", label: "Önemli Not", icon: AlertTriangle, c: "#F9A8D4", add: () => setL("onemli_notlar", [...nlRaw(sel.onemli_notlar), "Yeni not"]) },
+    { key: "gorusulen", label: "Görüşülen", icon: ClipboardList, c: "#86EFAC", add: () => setL("gorusulen", [...nlRaw(sel.gorusulen), "Yeni görüşülen konu"]) },
+    { key: "kararlar", label: "Karar", icon: Gavel, c: "#86EFAC", add: () => setL("kararlar", [...nlRaw(sel.kararlar), "Yeni karar"]) },
+    { key: "hedefler", label: "Hedef", icon: Target, c: "#FCA5A5", add: () => setC("hedefler", [...cmRaw(sel.hedefler), "Yeni hedef"]) },
     { key: "surec", label: "Aşama", icon: ClipboardList, c: "#93C5FD", add: () => setSurec([...surecArr, { ad: "Yeni aşama", sure: "" }]) },
-    { key: "sorumlular", label: "Sorumlu", icon: Users, c: "#F9A8D4", add: () => setL("sorumlular", [...sorumlular, "Ad: Sorumluluk"]) },
-    { key: "riskler", label: "Risk", icon: AlertTriangle, c: "#FDE68A", add: () => setL("riskler", [...riskler, "Yeni risk"]) },
+    { key: "sorumlular", label: "Sorumlu", icon: Users, c: "#F9A8D4", add: () => setL("sorumlular", [...nlRaw(sel.sorumlular), "Ad: Sorumluluk"]) },
+    { key: "riskler", label: "Risk", icon: AlertTriangle, c: "#FDE68A", add: () => setL("riskler", [...nlRaw(sel.riskler), "Yeni risk"]) },
     { key: "aksiyonlar", label: "Aksiyon", icon: CheckCircle2, c: "#86EFAC", add: () => setAks([...aksArr, { is: "Yeni iş", sor: "", trh: "", drm: "Bekliyor" }]) },
   ];
   const quickAdd = (key: string) => { setEdit(true); SECTIONS.find((s) => s.key === key)?.add(); };
@@ -210,7 +219,7 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
                 </p>
                 <div className="flex gap-2"><ClipboardList size={17} className="mt-1 shrink-0 text-ink/70" />
                   <div className="min-w-0 flex-1"><b>Katılımcılar :</b>
-                    {edit ? <div className="mt-1"><EditList items={katilimcilar} onChange={(a) => setL("katilimcilar", a)} ph="Katılımcı ekle" /></div>
+                    {edit ? <div className="mt-1"><EditList value={String(sel.katilimcilar ?? "")} onChange={(v) => UP({ katilimcilar: v })} ph="Katılımcı ekle" /></div>
                       : <ul className="ml-3 mt-0.5 list-disc space-y-0.5 marker:text-ink/40">{katilimcilar.map((k, i) => <li key={i}>{k}</li>)}</ul>}
                   </div>
                 </div>
@@ -220,28 +229,28 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
               <div className="relative float-right ml-4 mt-2 w-56 -rotate-2 rounded-sm bg-[#FEF08A] p-3 shadow-[2px_3px_8px_rgba(0,0,0,0.2)]">
                 <span className="absolute -top-2 left-1/2 h-5 w-10 rounded-sm bg-[#EADFA8]/80" style={{ transform: "translateX(-50%) rotate(-4deg)" }} />
                 <p className="mb-1 text-center text-[19px] font-bold" style={{ textDecoration: "underline", textDecorationColor: "#CA8A04" }}>Toplantı Amacı</p>
-                {edit ? <EditList items={amac} onChange={(a) => setL("amac", a)} ph="Amaç ekle" />
+                {edit ? <EditList value={String(sel.amac ?? "")} onChange={(v) => UP({ amac: v })} ph="Amaç ekle" />
                   : <ul className="space-y-0.5 text-[15px]">{amac.map((a, i) => <li key={i} className="flex gap-1"><span>•</span>{a}</li>)}</ul>}
               </div>
 
               <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <div>
                   <SectionTitle icon={ClipboardList} c="#60A5FA">Gündem</SectionTitle>
-                  {edit ? <EditList items={gundem} onChange={(a) => setL("gundem", a)} ph="Gündem maddesi ekle" />
+                  {edit ? <EditList value={String(sel.gundem ?? "")} onChange={(v) => UP({ gundem: v })} ph="Gündem maddesi ekle" />
                     : <ol className="space-y-1 text-[17px]">{gundem.map((g, i) => (
                         <li key={i} className="flex items-center gap-2"><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-ink/30 text-[12px]">{i + 1}</span><span className="flex-1">{g}</span>{i < 3 ? <CheckSquare size={16} className="text-good" /> : <Square size={16} className="text-ink/30" />}</li>
                       ))}</ol>}
                 </div>
                 <div>
                   <SectionTitle icon={AlertTriangle} c="#F9A8D4">Önemli Notlar</SectionTitle>
-                  {edit ? <EditList items={onemli} onChange={(a) => setL("onemli_notlar", a)} ph="Not ekle" />
+                  {edit ? <EditList value={String(sel.onemli_notlar ?? "")} onChange={(v) => UP({ onemli_notlar: v })} ph="Not ekle" />
                     : <ul className="space-y-1 text-[16px]">{onemli.map((n, i) => <li key={i} className="flex gap-1.5"><span className="text-ink/50">•</span><span>{n}</span></li>)}</ul>}
                 </div>
               </div>
 
               <div className="mt-5 clear-both">
                 <SectionTitle icon={ClipboardList} c="#86EFAC">Görüşülen Konular</SectionTitle>
-                {edit ? <EditList items={gorusulen} onChange={(a) => setL("gorusulen", a)} ph="Görüşülen konu ekle" />
+                {edit ? <EditList value={String(sel.gorusulen ?? "")} onChange={(v) => UP({ gorusulen: v })} ph="Görüşülen konu ekle" />
                   : <div className="space-y-1.5 text-[16px]">{gorusulen.map((g, i) => <p key={i}>{g}</p>)}</div>}
               </div>
             </div>
@@ -251,12 +260,12 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto]">
                 <div>
                   <SectionTitle icon={Gavel} c="#86EFAC">Kararlar</SectionTitle>
-                  {edit ? <EditList items={kararlar} onChange={(a) => setL("kararlar", a)} ph="Karar ekle" />
+                  {edit ? <EditList value={String(sel.kararlar ?? "")} onChange={(v) => UP({ kararlar: v })} ph="Karar ekle" />
                     : <ol className="space-y-1 text-[17px]">{kararlar.map((k, i) => <li key={i} className="flex gap-2"><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-ink/30 text-[12px]">{i + 1}</span><span>{k}</span></li>)}</ol>}
                 </div>
                 <div className="h-fit rounded-lg border-2 border-[#F0A6A6] bg-[#FDECEC]/60 p-3">
                   <p className="mb-1.5 flex items-center gap-1.5 text-[20px] font-bold"><Target size={17} className="text-[#DC2626]" /> Hedef</p>
-                  {edit ? <EditList items={hedefler} onChange={(a) => setC("hedefler", a)} ph="Hedef ekle" />
+                  {edit ? <EditList value={String(sel.hedefler ?? "")} onChange={(v) => UP({ hedefler: v })} ph="Hedef ekle" sep=", " />
                     : <ul className="space-y-1 text-[16px]">{hedefler.map((h, i) => <li key={i} className="flex items-center gap-1.5"><CheckSquare size={15} className="text-good" /> {h}</li>)}</ul>}
                 </div>
               </div>
@@ -287,12 +296,12 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
               <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <div>
                   <SectionTitle icon={Users} c="#F9A8D4">Sorumlular</SectionTitle>
-                  {edit ? <EditList items={sorumlular} onChange={(a) => setL("sorumlular", a)} ph="Ad: Sorumluluk" />
+                  {edit ? <EditList value={String(sel.sorumlular ?? "")} onChange={(v) => UP({ sorumlular: v })} ph="Ad: Sorumluluk" />
                     : <ul className="space-y-1 text-[16px]">{sorumlular.map((s, i) => { const k = s.indexOf(":"); return <li key={i} className="flex gap-1.5"><Users size={14} className="mt-1 shrink-0 text-ink/50" /><span>{k >= 0 ? <><b>{s.slice(0, k)}</b>{s.slice(k)}</> : s}</span></li>; })}</ul>}
                 </div>
                 <div>
                   <SectionTitle icon={AlertTriangle} c="#FDE68A">Riskler</SectionTitle>
-                  {edit ? <EditList items={riskler} onChange={(a) => setL("riskler", a)} ph="Risk ekle" />
+                  {edit ? <EditList value={String(sel.riskler ?? "")} onChange={(v) => UP({ riskler: v })} ph="Risk ekle" />
                     : <ul className="space-y-1 text-[16px]">{riskler.map((r, i) => <li key={i} className="flex gap-1.5"><span className="text-ink/50">•</span>{r}</li>)}</ul>}
                 </div>
               </div>
