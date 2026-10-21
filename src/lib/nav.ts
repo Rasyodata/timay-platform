@@ -101,6 +101,7 @@ export const WORKSPACES: Workspace[] = [
       { icon: FileText, label: "Davalar & İcra", view: "mod:mod-T-0016" },
       { icon: CalendarClock, label: "Duruşmalar", view: "mod:mod-T-0082" },
       { icon: Users, label: "Müvekkiller", view: "mod:mod-T-0083" },
+      { icon: Wallet, label: "Tahsilat/Masraf", view: "mod:mod-T-0084" },
       { icon: ShieldCheck, label: "Avukatlar", view: "mod:mod-T-0017" },
       { icon: Gavel, label: "Dilekçe (AI)", view: "hukuk-dilekce" },
       { icon: Calculator, label: "Faiz/Harç", view: "hukuk-hesap" },

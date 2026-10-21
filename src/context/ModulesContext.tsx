@@ -15,7 +15,7 @@ import {
 } from "@/types/modules";
 import { useAudit } from "@/context/AuditContext";
 
-const STORAGE_KEY = "timay.dynamic-modules.v68";
+const STORAGE_KEY = "timay.dynamic-modules.v69";
 
 interface NewModuleInput {
   name: string;
@@ -225,6 +225,24 @@ function specialTables(): DynamicModule[] {
       ],
       [
         { id: "mv1", ad: "Timay Teknoloji A.Ş.", tur: "Tüzel Kişi", tc_vergi: "1234567890", telefon: "0352 000 00 00", eposta: "hukuk@timay.co", adres: "Kayseri", bakiye: 150000, durum: "Aktif" },
+      ],
+    ),
+    mkTbl("T-0084", "Hukuk Tahsilat & Masraf",
+      "Dosya bazlı tahsilat (vekâlet ücreti, avans) ve masraf (harç, posta, bilirkişi) muhasebesi · makbuz takibi.", "Wallet",
+      [
+        { code: "tarih", name: "Tarih", type: "DATE", required: true, visibility: "EVERYONE" },
+        { code: "dosya_no", name: "Dosya No", type: "TEXT", required: false, visibility: "EVERYONE" },
+        { code: "muvekkil", name: "Müvekkil", type: "TEXT", required: false, visibility: "EVERYONE" },
+        { code: "tur", name: "Tür", type: "DROPDOWN", required: true, visibility: "EVERYONE", options: ["Tahsilat (+)", "Masraf (−)"] },
+        { code: "kalem", name: "Kalem", type: "DROPDOWN", required: false, visibility: "EVERYONE", options: ["Vekâlet Ücreti", "Avans / Peşin", "Harç", "Posta / Tebligat", "Bilirkişi", "Keşif", "Noter / Vekâletname", "Dosya Masrafı", "Diğer"] },
+        { code: "tutar", name: "Tutar (₺)", type: "NUMBER", required: true, visibility: "EVERYONE" },
+        { code: "makbuz_no", name: "Makbuz / Belge No", type: "TEXT", required: false, visibility: "EVERYONE" },
+        { code: "tahsil_durumu", name: "Durum", type: "DROPDOWN", required: false, visibility: "EVERYONE", options: ["Tahsil Edildi", "Bekliyor", "Kısmi"] },
+        { code: "aciklama", name: "Açıklama", type: "TEXTAREA", required: false, visibility: "EVERYONE" },
+      ],
+      [
+        { id: "tm1", tarih: "2026-10-18", dosya_no: "DI-2026-0001", muvekkil: "Timay Teknoloji A.Ş.", tur: "Tahsilat (+)", kalem: "Avans / Peşin", tutar: 25000, makbuz_no: "MKB-2026-0007", tahsil_durumu: "Tahsil Edildi", aciklama: "Dava avansı." },
+        { id: "tm2", tarih: "2026-10-20", dosya_no: "DI-2026-0001", muvekkil: "Timay Teknoloji A.Ş.", tur: "Masraf (−)", kalem: "Harç", tutar: 6831, makbuz_no: "", tahsil_durumu: "Tahsil Edildi", aciklama: "Peşin harç." },
       ],
     ),
     mkTbl("T-0049", "Randevu / Takvim Tablosu",

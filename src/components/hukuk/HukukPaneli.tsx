@@ -101,6 +101,7 @@ export default function HukukPaneli({ onNavigate }: { onNavigate: (v: View) => v
                 { label: "Yeni Dava / İcra", icon: FileText, v: "mod:mod-T-0016" as View, c: "#0A4EA2" },
                 { label: "Duruşma / İşlem Ekle", icon: CalendarClock, v: "mod:mod-T-0082" as View, c: "#1E7A46" },
                 { label: "Müvekkil Ekle", icon: Users, v: "mod:mod-T-0083" as View, c: "#7C3AED" },
+                { label: "Tahsilat / Masraf", icon: Wallet, v: "mod:mod-T-0084" as View, c: "#B5731A" },
                 { label: "Avukat Tanımla", icon: ShieldCheck, v: "mod:mod-T-0017" as View, c: "#0d9488" },
                 { label: "Dilekçe Oluştur (AI)", icon: Gavel, v: "hukuk-dilekce" as View, c: "#B5731A" },
                 { label: "Faiz & Harç Hesabı", icon: Calculator, v: "hukuk-hesap" as View, c: "#4B3FB0" },
