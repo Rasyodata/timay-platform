@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { Eye, FileText, Lock, Pencil, Plus, ShieldCheck, Trash2, Smartphone } from "lucide-react";
+import { Eye, FileText, Lock, Pencil, Plus, ShieldCheck, Trash2, Smartphone, X } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
 import { useUsers } from "@/context/UsersContext";
 import AccessDenied from "@/components/ui/AccessDenied";
+import { RecordForm } from "@/components/projects/ProjectTableCard";
 import { resolveIcon } from "@/lib/icons";
 import { openTableReport } from "@/lib/tableReport";
 import {
@@ -10,6 +11,7 @@ import {
   ROLE_LABELS,
   type DynamicField,
   type DynamicModule,
+  type DynamicRecord,
   type RoleKey,
 } from "@/types/modules";
 
@@ -95,6 +97,9 @@ export default function DynamicModulePage({
   const { currentUser, canViewField, can } = useUsers();
   const mod = getModule(moduleId);
   const [smsNote, setSmsNote] = useState("");
+  // Kayıt detayına in — her satır tıklanınca tüm alanları gösteren kart açılır
+  const [detail, setDetail] = useState<DynamicRecord | null>(null);
+  const [detailEdit, setDetailEdit] = useState(false);
 
   const role: RoleKey = currentUser.role;
   const level = mod?.perms[role] ?? "none";
@@ -224,12 +229,12 @@ export default function DynamicModulePage({
                       </th>
                     );
                   })}
-                  {canWrite && <th className="px-3 py-2" />}
+                  <th className="px-3 py-2" />
                 </tr>
               </thead>
               <tbody>
                 {mod.records.map((rec) => (
-                  <tr key={rec.id} className="border-b border-line/60 transition hover:bg-white/[0.02]">
+                  <tr key={rec.id} onClick={() => { setDetail(rec); setDetailEdit(false); }} className="cursor-pointer border-b border-line/60 transition hover:bg-neon-blue/5" title="Detayı aç">
                     {mod.fields.map((f) => {
                       const masked = !canViewField(f.visibility);
                       return (
@@ -240,13 +245,12 @@ export default function DynamicModulePage({
                         </td>
                       );
                     })}
-                    {canWrite && (
-                      <td className="px-3 py-2.5 text-right">
-                        <button onClick={() => deleteRecord(mod.id, rec.id)} className="rounded-md p-1 text-muted transition hover:text-critical" aria-label="Kaydı sil">
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
-                    )}
+                    <td className="px-3 py-2.5 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={(e) => { e.stopPropagation(); setDetail(rec); setDetailEdit(false); }} className="rounded-md p-1 text-muted transition hover:text-neon-blue" aria-label="Detay"><Eye size={14} /></button>
+                        {canWrite && <button onClick={(e) => { e.stopPropagation(); deleteRecord(mod.id, rec.id); }} className="rounded-md p-1 text-muted transition hover:text-critical" aria-label="Kaydı sil"><Trash2 size={14} /></button>}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -254,6 +258,44 @@ export default function DynamicModulePage({
           </div>
         )}
       </section>
+
+      {/* Kayıt detay kartı — her alan okunur; yöneticiler buradan düzenleyebilir */}
+      {detail && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 py-10 backdrop-blur-sm" onClick={() => setDetail(null)}>
+          <div className="w-full max-w-2xl rounded-2xl border border-line bg-panel shadow-card animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-2 border-b border-line px-5 py-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-ink"><Icon size={16} className="text-neon-violet" /> {mod.name} · Kayıt Detayı</h3>
+              <div className="flex items-center gap-1.5">
+                {canWrite && !detailEdit && (
+                  <button onClick={() => setDetailEdit(true)} className="flex items-center gap-1 rounded-lg border border-neon-blue/40 bg-neon-blue/10 px-2.5 py-1 text-xs font-medium text-neon-blue transition hover:bg-neon-blue/20"><Pencil size={13} /> Düzenle</button>
+                )}
+                <button onClick={() => setDetail(null)} className="grid h-8 w-8 place-items-center rounded-lg text-muted transition hover:bg-elevated"><X size={16} /></button>
+              </div>
+            </div>
+            <div className="max-h-[70vh] overflow-y-auto p-4">
+              {detailEdit ? (
+                <RecordForm mod={mod} initial={detail} onClose={() => { setDetailEdit(false); setDetail(null); }} />
+              ) : (
+                <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+                  {mod.fields.map((f) => {
+                    const masked = !canViewField(f.visibility);
+                    const val = masked ? null : formatValue(f, detail[f.code]);
+                    return (
+                      <div key={f.id} className={f.type === "TEXTAREA" ? "sm:col-span-2" : ""}>
+                        <dt className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-muted">{f.name}{f.visibility !== "EVERYONE" && <Lock size={10} className="text-faint" />}</dt>
+                        <dd className="mt-0.5 whitespace-pre-wrap break-words text-sm text-ink">{masked ? <span className="inline-flex items-center gap-1 text-muted"><Lock size={11} /> Maskeli</span> : val}</dd>
+                      </div>
+                    );
+                  })}
+                  {detail._eklenme ? (
+                    <div><dt className="text-[11px] font-semibold uppercase tracking-wide text-muted">Kayıt Tarihi</dt><dd className="mt-0.5 text-sm text-faint nums">{String(detail._eklenme).split("-").reverse().join(".")}</dd></div>
+                  ) : null}
+                </dl>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

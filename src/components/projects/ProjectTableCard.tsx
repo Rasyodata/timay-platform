@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { FileText, Lock, Pencil, Plus, Trash2, Download, Upload } from "lucide-react";
+import { FileText, Lock, Pencil, Plus, Trash2, Download, Upload, Eye, X } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
 import { useUsers } from "@/context/UsersContext";
 
@@ -190,6 +190,7 @@ export default function ProjectTableCard({ moduleId }: { moduleId: string }) {
   const mod = getModule(moduleId);
   // null = kapalı, "new" = ekleme, string id = düzenleme
   const [form, setForm] = useState<string | null>(null);
+  const [detail, setDetail] = useState<DynamicRecord | null>(null);
   const [note, setNote] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
@@ -308,13 +309,13 @@ export default function ProjectTableCard({ moduleId }: { moduleId: string }) {
                   );
                 })}
                 <th className="whitespace-nowrap px-3 py-2 font-medium text-muted">Kayıt Tarihi</th>
-                {canWrite && <th className="px-3 py-2" />}
+                <th className="px-3 py-2" />
               </tr>
             </thead>
             <tbody>
               {mod.records.map((rec) => (
-                <tr key={rec.id} className={`border-b border-line/60 transition hover:bg-white/[0.02] ${selected.has(String(rec.id)) ? "bg-neon-blue/5" : ""}`}>
-                  <td className="px-3 py-2.5"><input type="checkbox" checked={selected.has(String(rec.id))} onChange={() => toggleOne(String(rec.id))} aria-label="Satırı seç" className="cursor-pointer accent-neon-blue" /></td>
+                <tr key={rec.id} onClick={() => setDetail(rec)} title="Detayı aç" className={`cursor-pointer border-b border-line/60 transition hover:bg-neon-blue/5 ${selected.has(String(rec.id)) ? "bg-neon-blue/5" : ""}`}>
+                  <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={selected.has(String(rec.id))} onChange={() => toggleOne(String(rec.id))} aria-label="Satırı seç" className="cursor-pointer accent-neon-blue" /></td>
                   {mod.fields.map((f) => {
                     const masked = !canViewField(f.visibility);
                     return (
@@ -324,18 +325,50 @@ export default function ProjectTableCard({ moduleId }: { moduleId: string }) {
                     );
                   })}
                   <td className="px-3 py-2.5 text-faint nums">{rec._eklenme ? String(rec._eklenme).split("-").reverse().join(".") : "—"}</td>
-                  {canWrite && (
-                    <td className="px-3 py-2.5 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => setForm(String(rec.id))} className="rounded-md p-1 text-muted transition hover:text-neon-blue" aria-label="Düzenle"><Pencil size={14} /></button>
-                        <button onClick={() => deleteRecord(mod.id, String(rec.id))} className="rounded-md p-1 text-muted transition hover:text-critical" aria-label="Sil"><Trash2 size={14} /></button>
-                      </div>
-                    </td>
-                  )}
+                  <td className="px-3 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => setDetail(rec)} className="rounded-md p-1 text-muted transition hover:text-neon-blue" aria-label="Detay"><Eye size={14} /></button>
+                      {canWrite && <button onClick={() => setForm(String(rec.id))} className="rounded-md p-1 text-muted transition hover:text-neon-blue" aria-label="Düzenle"><Pencil size={14} /></button>}
+                      {canWrite && <button onClick={() => deleteRecord(mod.id, String(rec.id))} className="rounded-md p-1 text-muted transition hover:text-critical" aria-label="Sil"><Trash2 size={14} /></button>}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Kayıt detay kartı — her alan okunur; yöneticiler buradan düzenleyebilir */}
+      {detail && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 py-10 backdrop-blur-sm" onClick={() => setDetail(null)}>
+          <div className="w-full max-w-2xl rounded-2xl border border-line bg-panel shadow-card animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-2 border-b border-line px-5 py-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-ink"><Icon size={16} className="text-neon-violet" /> {mod.name} · Kayıt Detayı</h3>
+              <div className="flex items-center gap-1.5">
+                {canWrite && (
+                  <button onClick={() => { setForm(String(detail.id)); setDetail(null); }} className="flex items-center gap-1 rounded-lg border border-neon-blue/40 bg-neon-blue/10 px-2.5 py-1 text-xs font-medium text-neon-blue transition hover:bg-neon-blue/20"><Pencil size={13} /> Düzenle</button>
+                )}
+                <button onClick={() => setDetail(null)} className="grid h-8 w-8 place-items-center rounded-lg text-muted transition hover:bg-elevated"><X size={16} /></button>
+              </div>
+            </div>
+            <div className="max-h-[70vh] overflow-y-auto p-4">
+              <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+                {mod.fields.map((f) => {
+                  const masked = !canViewField(f.visibility);
+                  return (
+                    <div key={f.id} className={f.type === "TEXTAREA" ? "sm:col-span-2" : ""}>
+                      <dt className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-muted">{f.name}{f.visibility !== "EVERYONE" && <Lock size={10} className="text-faint" />}</dt>
+                      <dd className="mt-0.5 whitespace-pre-wrap break-words text-sm text-ink">{masked ? <span className="inline-flex items-center gap-1 text-muted"><Lock size={11} /> Maskeli</span> : fmt(f, detail[f.code])}</dd>
+                    </div>
+                  );
+                })}
+                {detail._eklenme ? (
+                  <div><dt className="text-[11px] font-semibold uppercase tracking-wide text-muted">Kayıt Tarihi</dt><dd className="mt-0.5 text-sm text-faint nums">{String(detail._eklenme).split("-").reverse().join(".")}</dd></div>
+                ) : null}
+              </dl>
+            </div>
+          </div>
         </div>
       )}
     </section>
