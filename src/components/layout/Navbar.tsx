@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Bell, Check, ChevronDown, LogOut, Menu, Radio, Search, X,
+  Bell, Check, ChevronDown, LogOut, Menu, Radio, Search, X, Trash2,
   CalendarCheck2, ListChecks, Inbox, StickyNote, NotebookPen, Users, Folder,
   FolderKanban, ClipboardList, Building2, Table2, FileText, UserPlus, Gauge, Wallet,
 } from "lucide-react";
@@ -127,7 +127,9 @@ function GlobalSearch({ onNavigate }: { onNavigate: (v: View) => void }) {
 function ProfileMenu() {
   const { logout } = useAuth();
   const { users, currentUser, setCurrentUser } = useUsers();
+  const { clearAllRecords } = useModules();
   const [open, setOpen] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -144,7 +146,7 @@ function ProfileMenu() {
   return (
     <div className="relative" ref={ref}>
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => { setOpen((v) => !v); setConfirmClear(false); }}
         aria-haspopup="menu"
         aria-expanded={open}
         className={`flex items-center gap-2 rounded-xl border bg-panel py-1.5 pl-1.5 pr-2 transition sm:pr-3 ${
@@ -192,6 +194,11 @@ function ProfileMenu() {
             </div>
           </div>
           <div className="border-t border-line p-1.5">
+            <button role="menuitem"
+              onClick={() => { if (confirmClear) { clearAllRecords(); setConfirmClear(false); setOpen(false); } else { setConfirmClear(true); } }}
+              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${confirmClear ? "bg-warning/10 text-warning" : "text-muted hover:bg-elevated hover:text-ink"}`}>
+              <Trash2 size={16} /> {confirmClear ? "Emin misin? Tüm kayıtları sil" : "Verileri Temizle (Test)"}
+            </button>
             <button role="menuitem" onClick={handleLogout} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-critical transition hover:bg-critical/10">
               <LogOut size={16} /> Çıkış Yap
             </button>
@@ -273,7 +280,6 @@ export default function Navbar({ onMenu, onNavigate, view, activeWs }: NavbarPro
           >
             <t.icon size={15} className="shrink-0" />
             <span className="whitespace-nowrap">{t.label}</span>
-            {t.kod && <span className="hidden rounded border border-line bg-base/60 px-1 font-mono text-[9px] leading-tight text-faint 2xl:inline-block">{t.kod}</span>}
             {t.badge != null && t.badge > 0 && (
               <span className="grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold text-white" style={{ background: "#C1292E" }}>{t.badge}</span>
             )}

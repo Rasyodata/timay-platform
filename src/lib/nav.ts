@@ -28,6 +28,8 @@ import {
   UserPlus,
   Gauge,
   ClipboardList,
+  Scale,
+  FileText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { View } from "@/App";
@@ -88,6 +90,14 @@ export const WORKSPACES: Workspace[] = [
     tabs: [
       { icon: Folder, label: "Dosya Kütüphanesi", view: "dosya-kutuphanesi", kod: "T-0067", match: (v) => v === "dosya-kutuphanesi" },
       { icon: BookOpen, label: "Dokümanlar / Wiki", view: "dokumanlar", kod: "T-0064" },
+    ],
+  },
+  {
+    key: "hukuk", label: "Hukuk Yönetimi", icon: Scale, defaultView: "mod:mod-T-0016",
+    tabs: [
+      { icon: FileText, label: "Davalar & İcra", view: "mod:mod-T-0016", kod: "T-0016" },
+      { icon: ShieldCheck, label: "Avukatlar", view: "mod:mod-T-0017", kod: "T-0017" },
+      { icon: Gavel, label: "Dilekçe (AI)", view: "hukuk-dilekce", kod: "AI" },
     ],
   },
   {

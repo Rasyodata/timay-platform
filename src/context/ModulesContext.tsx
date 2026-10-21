@@ -38,6 +38,7 @@ interface ModulesState {
   addRecord: (moduleId: string, data: Record<string, unknown>) => void;
   updateRecord: (moduleId: string, recordId: string, data: Record<string, unknown>) => void;
   deleteRecord: (moduleId: string, recordId: string) => void;
+  clearAllRecords: () => void;
 }
 
 const Ctx = createContext<ModulesState | null>(null);
@@ -1652,9 +1653,15 @@ export function ModulesProvider({ children }: { children: ReactNode }) {
     log({ category: "kayit", action: "Kayıt silindi", target: m?.name });
   }, [modules, log]);
 
+  // Tüm modüllerin kayıtlarını temizle (gerçek test için temiz başlangıç) — tablo/alan yapısı korunur.
+  const clearAllRecords = useCallback(() => {
+    setModules((prev) => prev.map((m) => ({ ...m, records: [] })));
+    log({ category: "kayit", action: "Tüm kayıtlar temizlendi (test)" });
+  }, [log]);
+
   const value = useMemo<ModulesState>(
-    () => ({ modules, getModule, createModule, updateModule, deleteModule, toggleActive, addRecord, updateRecord, deleteRecord }),
-    [modules, getModule, createModule, updateModule, deleteModule, toggleActive, addRecord, updateRecord, deleteRecord],
+    () => ({ modules, getModule, createModule, updateModule, deleteModule, toggleActive, addRecord, updateRecord, deleteRecord, clearAllRecords }),
+    [modules, getModule, createModule, updateModule, deleteModule, toggleActive, addRecord, updateRecord, deleteRecord, clearAllRecords],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

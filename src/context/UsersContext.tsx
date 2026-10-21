@@ -19,7 +19,7 @@ import {
 } from "@/types/users";
 import type { Visibility } from "@/types/modules";
 
-const STORAGE_KEY = "timay.users.v9";
+const STORAGE_KEY = "timay.users.v10";
 let counter = 0;
 const uid = (p: string) => `${p}-${Date.now().toString(36)}-${(counter++).toString(36)}`;
 
@@ -51,20 +51,10 @@ const Ctx = createContext<UsersState | null>(null);
 function seed(): Persisted {
   return {
     users: [
-      { id: "u-1", kod: "K-0001", name: "Şevket Kaan", email: "sevketkaan00@gmail.com", phone: "0532 111 22 33", department: "Yönetim", userType: "Yönetici", adres: { sokak: "Barbaros Cad. No:12", mahalle: "Barbaros Mah.", ilce: "Ataşehir", il: "İstanbul" }, faturaAdresi: { sokak: "Barbaros Cad. No:12", mahalle: "Barbaros Mah.", ilce: "Ataşehir", il: "İstanbul" }, vergiDairesi: "Kozyatağı VD", vergiNo: "1234567890", tcNo: "11111111111", role: "owner", active: true },
-      { id: "u-2", kod: "K-0002", name: "Ahmet Yılmaz", email: "ahmet@timay.co", phone: "0532 222 33 44", department: "Yazılım", userType: "Personel", adres: { sokak: "Tunalı Sok. No:5", mahalle: "Kızılay Mah.", ilce: "Çankaya", il: "Ankara" }, vergiDairesi: "", vergiNo: "", tcNo: "22222222222", role: "contributor", active: true },
-      { id: "u-3", kod: "K-0003", name: "Ayşe Demir", email: "ayse@timay.co", phone: "0532 333 44 55", department: "Finans", userType: "Danışman", adres: { sokak: "Kordon Cad. No:30", mahalle: "Alsancak Mah.", ilce: "Konak", il: "İzmir" }, faturaAdresi: { sokak: "Kordon Cad. No:30", mahalle: "Alsancak Mah.", ilce: "Konak", il: "İzmir" }, vergiDairesi: "Konak VD", vergiNo: "9876543210", tcNo: "33333333333", role: "manager", active: true },
-      { id: "u-4", kod: "K-0004", name: "Mehmet Kaya", email: "mehmet@dis.co", phone: "0532 444 55 66", department: "Dış Kaynak", userType: "Satıcı", adres: { sokak: "Fsm Blv. No:8", mahalle: "Görükle Mah.", ilce: "Nilüfer", il: "Bursa" }, faturaAdresi: { sokak: "Fsm Blv. No:8", mahalle: "Görükle Mah.", ilce: "Nilüfer", il: "Bursa" }, vergiDairesi: "Nilüfer VD", vergiNo: "4567891230", tcNo: "44444444444", role: "viewer", active: true },
-      { id: "u-5", kod: "K-0005", name: "Acme A.Ş.", email: "info@acme.co", phone: "0212 100 00 00", department: "Dış Kaynak", userType: "Müşteri", adres: { sokak: "Büyükdere Cad. No:100", mahalle: "Mecidiyeköy Mah.", ilce: "Şişli", il: "İstanbul" }, faturaAdresi: { sokak: "Büyükdere Cad. No:100", mahalle: "Mecidiyeköy Mah.", ilce: "Şişli", il: "İstanbul" }, vergiDairesi: "Şişli VD", vergiNo: "1112223334", tcNo: "", role: "viewer", active: true },
-      { id: "u-6", kod: "K-0006", name: "Beta Tedarik Ltd.", email: "satis@beta.co", phone: "0216 200 00 00", department: "Dış Kaynak", userType: "Satıcı", adres: { sokak: "Alemdağ Cad. No:45", mahalle: "Atatürk Mah.", ilce: "Ümraniye", il: "İstanbul" }, faturaAdresi: { sokak: "Alemdağ Cad. No:45", mahalle: "Atatürk Mah.", ilce: "Ümraniye", il: "İstanbul" }, vergiDairesi: "Ümraniye VD", vergiNo: "5556667778", tcNo: "", role: "viewer", active: true },
-      { id: "u-7", kod: "K-0007", name: "Av. Can Yılmaz", email: "can@hukuk.co", phone: "0532 777 88 99", department: "Dış Kaynak", userType: "Avukat", adres: { sokak: "Barbaros Blv. No:22", mahalle: "Yıldız Mah.", ilce: "Beşiktaş", il: "İstanbul" }, vergiDairesi: "", vergiNo: "", tcNo: "55555555555", baro: "İstanbul Barosu", sicilNo: "48217", role: "viewer", active: true },
-      { id: "u-8", kod: "K-0008", name: "Delta Danışmanlık", email: "info@delta.co", phone: "0312 300 00 00", department: "Dış Kaynak", userType: "Danışman", adres: { sokak: "Atatürk Blv. No:77", mahalle: "Kavaklıdere Mah.", ilce: "Çankaya", il: "Ankara" }, faturaAdresi: { sokak: "Atatürk Blv. No:77", mahalle: "Kavaklıdere Mah.", ilce: "Çankaya", il: "Ankara" }, vergiDairesi: "Çankaya VD", vergiNo: "9990001112", tcNo: "", role: "viewer", active: true },
-      { id: "u-9", kod: "K-0009", name: "Rasyodata", email: "rasyodatagrup@gmail.com", phone: "", department: "Yönetim", userType: "Yönetici", adres: { sokak: "", mahalle: "", ilce: "", il: "" }, vergiDairesi: "", vergiNo: "", tcNo: "", role: "owner", active: true },
+      { id: "u-9", kod: "K-0001", name: "Rasyodata", email: "rasyodatagrup@gmail.com", phone: "", department: "Yönetim", userType: "Yönetici", adres: { sokak: "", mahalle: "", ilce: "", il: "" }, vergiDairesi: "", vergiNo: "", tcNo: "", role: "owner", active: true },
     ],
     caps: structuredCaps(),
-    inheritance: [
-      { id: "ir-1", department: "Pazarlama", role: "viewer", scope: "Tüm Pazarlama Projeleri" },
-    ],
+    inheritance: [],
     currentUserId: "u-9",
   };
 }

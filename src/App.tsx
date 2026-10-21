@@ -29,6 +29,7 @@ import IKYonetimi from "@/components/academy/IKYonetimi";
 import GayrimenkulYonetimi from "@/components/realestate/GayrimenkulYonetimi";
 import TaleplerMerkezi from "@/components/requests/TaleplerMerkezi";
 import TimayPlanlayici from "@/components/agenda/TimayPlanlayici";
+import HukukDilekce from "@/components/hukuk/HukukDilekce";
 import TekrarlayanIslemler from "@/components/finance/TekrarlayanIslemler";
 import PipelineBoard from "@/components/crm/PipelineBoard";
 import Navbar from "@/components/layout/Navbar";
@@ -60,6 +61,7 @@ export type View =
   | "emlak"
   | "talepler"
   | "planlayici"
+  | "hukuk-dilekce"
   | "finansal-raporlar"
   | "tekrarlayan"
   | "pipeline"
@@ -124,6 +126,7 @@ function DashboardShell() {
                 {view === "ajanda" && <AjandaPage onNavigate={navigate} />}
                 {view === "ajandam" && <AjandaDashboard onNavigate={navigate} />}
                 {view === "planlayici" && <TimayPlanlayici onNavigate={navigate} />}
+                {view === "hukuk-dilekce" && <HukukDilekce onNavigate={navigate} />}
                 {view === "dokumanlar" && <PagesPage onNavigate={navigate} />}
                 {view === "dosya-kutuphanesi" && <DosyaKutuphanesi onNavigate={navigate} />}
                 {view === "gorev-yonetimi" && <GorevYonetimi onNavigate={navigate} />}
