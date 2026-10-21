@@ -129,7 +129,7 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
         <span className="rounded-md border border-line bg-base/60 px-1.5 py-0.5 font-mono text-[10px] text-muted" title="Ajanda Hareketleri T-0078 · kaynak: T-0057, T-0060, T-0056, T-0063, T-0068, T-0076, T-0049, T-0053">T-0078 · Ajanda Hareketleri</span>
       </div>
 
-      <div className="flex flex-col items-start gap-3 lg:flex-row">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
         {/* Ana alan — büyük defter (çok not için) */}
         <div className="min-w-0 flex-1 space-y-3 rounded-xl p-5 shadow-[0_12px_34px_rgba(0,0,0,0.2)]" style={{ background: "#FBF7EC", border: "1px solid #E7DFC9" }}>
           {/* Başlık — büyük tarih + mini ay */}

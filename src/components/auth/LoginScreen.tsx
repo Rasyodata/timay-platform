@@ -254,19 +254,35 @@ export default function LoginScreen() {
   const { login, justLoggedOut } = useAuth();
   const { users, setCurrentUser } = useUsers();
   const [email, setEmail] = useState("rasyodatagrup@gmail.com");
-  const [password, setPassword] = useState("15045904");
+  const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [fails, setFails] = useState(0);
+  const [lockUntil, setLockUntil] = useState(0);
   const timer = useRef<number | null>(null);
 
   useEffect(() => () => { if (timer.current) window.clearTimeout(timer.current); }, []);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    setBusy(true);
-    // Girilen e-postaya ait aktif kullanıcı olarak gir (rolüyle birlikte)
+    // Deneme sınırı — 5 hatalı denemeden sonra 30 sn kilit (basit brute-force caydırıcı)
+    if (lockUntil > Date.now()) {
+      setErr(`Çok fazla hatalı deneme. ${Math.ceil((lockUntil - Date.now()) / 1000)} sn sonra tekrar deneyin.`);
+      return;
+    }
     const u = users.find((x) => x.active && x.email.trim().toLocaleLowerCase("tr") === email.trim().toLocaleLowerCase("tr"));
-    if (u) setCurrentUser(u.id);
+    // Şifre doğrulama: kullanıcının parolası tanımlıysa eşleşmeli (boşsa demo kullanıcı — atlanır)
+    const ok = !!u && (!u.password || u.password === password);
+    if (!ok) {
+      const f = fails + 1;
+      setFails(f);
+      setErr(f >= 3 ? `E-posta veya şifre hatalı. (${f}/5 deneme)` : "E-posta veya şifre hatalı.");
+      if (f >= 5) { setLockUntil(Date.now() + 30000); setErr("Çok fazla hatalı deneme. 30 sn sonra tekrar deneyin."); }
+      return;
+    }
+    setErr(""); setFails(0); setBusy(true);
+    setCurrentUser(u.id);
     timer.current = window.setTimeout(login, 850);
   };
   // Hızlı giriş için örnek hesaplar (aktif kullanıcılar)
@@ -361,10 +377,16 @@ export default function LoginScreen() {
                 </a>
               </div>
 
+              {err && (
+                <div className="flex items-center gap-2 rounded-xl border border-critical/30 bg-critical/10 px-3 py-2 text-xs text-critical animate-fade-in">
+                  <Lock size={14} /> {err}
+                </div>
+              )}
+
               {/* animated gradient button with shine sweep */}
               <button
                 type="submit"
-                disabled={busy}
+                disabled={busy || lockUntil > Date.now()}
                 className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-neon-blue via-neon-violet to-neon-blue bg-[length:200%_auto] py-3 text-sm font-semibold text-white shadow-glow-blue transition-all duration-500 hover:bg-[position:100%_0] hover:shadow-glow-violet disabled:opacity-70"
               >
                 {/* shine */}

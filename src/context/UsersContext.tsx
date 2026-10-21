@@ -19,7 +19,7 @@ import {
 } from "@/types/users";
 import type { Visibility } from "@/types/modules";
 
-const STORAGE_KEY = "timay.users.v10";
+const STORAGE_KEY = "timay.users.v11";
 let counter = 0;
 const uid = (p: string) => `${p}-${Date.now().toString(36)}-${(counter++).toString(36)}`;
 
@@ -51,7 +51,7 @@ const Ctx = createContext<UsersState | null>(null);
 function seed(): Persisted {
   return {
     users: [
-      { id: "u-9", kod: "K-0001", name: "Rasyodata", email: "rasyodatagrup@gmail.com", phone: "", department: "Yönetim", userType: "Yönetici", adres: { sokak: "", mahalle: "", ilce: "", il: "" }, vergiDairesi: "", vergiNo: "", tcNo: "", role: "owner", active: true },
+      { id: "u-9", kod: "K-0001", name: "Rasyodata", email: "rasyodatagrup@gmail.com", phone: "", department: "Yönetim", userType: "Yönetici", adres: { sokak: "", mahalle: "", ilce: "", il: "" }, vergiDairesi: "", vergiNo: "", tcNo: "", role: "owner", active: true, password: "15045904" },
     ],
     caps: structuredCaps(),
     inheritance: [],

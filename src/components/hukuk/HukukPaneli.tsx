@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Scale, FileText, Gavel, CalendarClock, Users, Wallet, AlertTriangle, ArrowRight, ShieldCheck, Calculator } from "lucide-react";
+import { Scale, FileText, Gavel, CalendarClock, Users, Wallet, AlertTriangle, ArrowRight, ShieldCheck, Calculator, Printer } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
 import type { DynamicRecord } from "@/types/modules";
 import type { View } from "@/App";
@@ -56,6 +56,10 @@ export default function HukukPaneli({ onNavigate }: { onNavigate: (v: View) => v
         <div>
           <h1 className="text-xl font-bold text-ink">Hukuk Yönetimi Paneli</h1>
           <p className="text-xs text-muted">Dava & icra takibi · duruşma takvimi · müvekkil · tahsilat · dilekçe ve faiz/harç araçları</p>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <button onClick={() => onNavigate("mod:mod-T-0016")} className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm text-muted transition hover:bg-elevated hover:text-ink"><FileText size={15} /> Rapor / Dosyalar</button>
+          <button onClick={() => window.print()} className="no-print flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm text-muted transition hover:bg-elevated hover:text-ink"><Printer size={15} /> Yazdır</button>
         </div>
       </div>
 

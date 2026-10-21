@@ -54,6 +54,8 @@ export interface User {
   sicilNo?: string;
   role: RoleKey;
   active: boolean;
+  /** Giriş şifresi (demo/prototip — gerçek güvenlik için backend gerekir). Boşsa parola doğrulaması atlanır. */
+  password?: string;
 }
 
 /** Sistem geneli yetenekler (rol şablonlarının belirlediği). */
