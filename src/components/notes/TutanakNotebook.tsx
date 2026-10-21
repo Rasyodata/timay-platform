@@ -171,11 +171,13 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
       </div>
 
       <div className="flex items-stretch">
-        {/* Defter */}
+        {/* Defter — düzenleme modunda değilken üzerine tıklayınca düzenlenebilir */}
         <div
+          onClick={!edit ? () => setEdit(true) : undefined}
+          title={!edit ? "Düzenlemek için üzerine tıklayın" : undefined}
           onDragOver={dragSec ? (e) => e.preventDefault() : undefined}
           onDrop={dragSec ? (e) => { e.preventDefault(); quickAdd(dragSec); setDragSec(null); } : undefined}
-          className={`relative min-w-0 flex-1 overflow-hidden rounded-l-xl rounded-r-sm text-ink shadow-[0_10px_30px_rgba(0,0,0,0.18)] transition ${dragSec ? "ring-4 ring-neon-blue/50" : ""}`}
+          className={`relative min-w-0 flex-1 overflow-hidden rounded-l-xl rounded-r-sm text-ink shadow-[0_10px_30px_rgba(0,0,0,0.18)] transition ${dragSec ? "ring-4 ring-neon-blue/50" : ""} ${!edit ? "cursor-text" : ""}`}
           style={{ fontFamily: HAND, background: "#FFFDF4", backgroundImage: "repeating-linear-gradient(#FFFDF4 0 30px, #DCE6EF 30px 31px)", border: "1px solid #E7E0CC" }}>
           <div className="grid gap-0 lg:grid-cols-2">
             {/* ── SOL SAYFA ── */}

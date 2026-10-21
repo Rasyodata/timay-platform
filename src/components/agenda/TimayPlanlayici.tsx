@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   CheckSquare, Square, Users, AlertCircle, ArrowRight, Clock3,
   Lightbulb, Droplet, Smile, Meh, Frown, CalendarCheck, ChevronLeft, ChevronRight,
@@ -29,6 +29,7 @@ const TIP: Record<string, { renk: string; kisa: string }> = {
 
 // Hızlı İşlemler — ilgili tabloya yerinde kayıt açar (sağ panelde; deftere sürüklenebilir)
 const SEKMELER: { label: string; renk: string; addMod: string; defaults?: Record<string, unknown> }[] = [
+  { label: "Yaz", renk: "#2563EB", addMod: "YAZ" },
   { label: "Görev", renk: "#2E8B74", addMod: "mod-T-0057" },
   { label: "Etkinlik", renk: "#0d9488", addMod: "mod-T-0060" },
   { label: "Görüşme", renk: "#0E7490", addMod: "mod-T-0060", defaults: { tur: "Görüşme" } },
@@ -50,6 +51,7 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
   const [addModal, setAddModal] = useState<{ modId: string; baslik: string; defaults?: Record<string, unknown>; rec?: DynamicRecord } | null>(null);
   const [noteText, setNoteText] = useState("");
   const [dragSek, setDragSek] = useState<string | null>(null);
+  const noteRef = useRef<HTMLInputElement>(null);
   const lt = (id: string) => setLchk((p) => ({ ...p, [id]: !p[id] }));
 
   const curDate = new Date(cur);
@@ -85,8 +87,9 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
   const nav = (d: number) => setCur((c) => c + d * ONE);
   const bugun = () => { const d = new Date(); d.setHours(0, 0, 0, 0); setCur(d.getTime()); };
 
-  // Hızlı İşlem — ilgili tabloya kayıt aç (seçili güne)
+  // Hızlı İşlem — ilgili tabloya kayıt aç (seçili güne). "Yaz" → deftere not yaz alanına odaklan
   const addSekme = (s: typeof SEKMELER[number]) => {
+    if (s.addMod === "YAZ") { noteRef.current?.focus(); noteRef.current?.scrollIntoView({ block: "center" }); return; }
     const base = s.addMod === "mod-T-0068" ? { renk: "Sarı", tarih: curStr } : { tarih: curStr };
     setAddModal({ modId: s.addMod, baslik: s.label, defaults: { ...base, ...(s.defaults ?? {}) } });
   };
@@ -180,9 +183,13 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
                 <span className="flex items-center gap-1.5 text-[12px] font-bold tracking-wide text-ink"><BookOpen size={13} /> GÜNÜN DEFTERİ <span className="font-normal text-ink/50">({dayDefter.length})</span></span>
                 <AddBtn modId="mod-T-0057" />
               </div>
-              <div className="space-y-1 p-3">
+              {/* Çizgili defter alanı — boş satırlar görünür; sürüklenen buraya bırakılınca eklenir */}
+              <div className="relative min-h-[460px] px-3 py-1" style={{ backgroundImage: "repeating-linear-gradient(transparent 0 33px, #D7E3EF 33px 34px)" }}>
+                {dayDefter.length === 0 && (
+                  <p className="pt-2 text-center text-[12px] text-ink/35">Boş — sağdaki Hızlı İşlemler'den sürükleyip bırakın ya da aşağıya not yazın.</p>
+                )}
                 {dayDefter.map((it) => { const m = TIP[it.tip]; return (
-                  <div key={it.id} className="group flex w-full items-center gap-2 rounded-lg border border-black/5 bg-white/60 px-2.5 py-2 transition hover:border-neon-blue/40">
+                  <div key={it.id} className="group flex w-full items-center gap-2" style={{ height: 34 }}>
                     <button onClick={() => setAddModal({ modId: it.modId, baslik: it.tip, rec: it.rec })} className="flex min-w-0 flex-1 items-center gap-2 text-left">
                       <span className="w-16 shrink-0 rounded px-1 py-0.5 text-center text-[8px] font-bold tracking-wide" style={{ background: `${m.renk}1f`, color: m.renk }}>{m.kisa}</span>
                       {it.time ? <span className="w-10 shrink-0 text-[11px] text-ink/45 nums">{it.time}</span> : <span className="w-10 shrink-0" />}
@@ -194,20 +201,13 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
                     </div>
                   </div>
                 ); })}
-                {dayDefter.length === 0 && (
-                  <div className="rounded-lg border border-dashed border-black/10 py-6 text-center">
-                    <BookOpen size={20} className="mx-auto mb-1.5 text-ink/30" />
-                    <p className="text-[13px] text-ink/50">Bu güne düşen kayıt yok.</p>
-                    <p className="mt-0.5 text-[11px] text-ink/35">Sağdaki Hızlı İşlemler'den sürükleyip bırakın ya da aşağıya not yazın.</p>
-                  </div>
-                )}
-                {/* Deftere not yaz */}
-                <div className="mt-2 flex items-center gap-2 border-t border-black/10 pt-2">
-                  <FileText size={14} className="shrink-0 text-neon-blue" />
-                  <input value={noteText} onChange={(e) => setNoteText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") saveNote(); }}
-                    placeholder="Deftere not yaz…" className="flex-1 rounded-lg border border-black/15 bg-white/80 px-2.5 py-1.5 text-[13px] text-ink outline-none focus:border-neon-blue" style={{ fontFamily: "inherit" }} />
-                  <button onClick={saveNote} disabled={!noteText.trim()} className="flex items-center gap-1 rounded-lg bg-neon-blue px-2.5 py-1.5 text-[13px] font-semibold text-white transition hover:brightness-110 disabled:opacity-40"><Send size={13} /> Ekle</button>
-                </div>
+              </div>
+              {/* Deftere not yaz */}
+              <div className="flex items-center gap-2 border-t border-black/10 bg-white/60 p-3">
+                <FileText size={14} className="shrink-0 text-neon-blue" />
+                <input ref={noteRef} value={noteText} onChange={(e) => setNoteText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") saveNote(); }}
+                  placeholder="Deftere not yaz…" className="flex-1 rounded-lg border border-black/15 bg-white/80 px-2.5 py-1.5 text-[13px] text-ink outline-none focus:border-neon-blue" style={{ fontFamily: "inherit" }} />
+                <button onClick={saveNote} disabled={!noteText.trim()} className="flex items-center gap-1 rounded-lg bg-neon-blue px-2.5 py-1.5 text-[13px] font-semibold text-white transition hover:brightness-110 disabled:opacity-40"><Send size={13} /> Ekle</button>
               </div>
             </div>
           </div>
