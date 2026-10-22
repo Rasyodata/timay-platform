@@ -59,6 +59,8 @@ export const WORKSPACES: Workspace[] = [
     tabs: [
       { icon: FolderKanban, label: "Tüm Projeler", view: "projects", kod: "PRJ", match: (v) => v === "projects" || v.startsWith("project:") },
       { icon: FolderPlus, label: "Yeni Proje", view: "project-new", kod: "PRJ" },
+      { icon: NotebookPen, label: "Proje Defteri", view: "proje-defteri", kod: "T-0086" },
+      { icon: Table2, label: "Defter Hareketleri", view: "mod:mod-T-0086", kod: "T-0086" },
       { icon: FileBarChart, label: "Belgeler", view: "evraklar", kod: "EVR", match: (v) => v === "evraklar" || v === "evrak-new" },
     ],
   },

@@ -15,7 +15,7 @@ import {
 } from "@/types/modules";
 import { useAudit } from "@/context/AuditContext";
 
-const STORAGE_KEY = "timay.dynamic-modules.v73";
+const STORAGE_KEY = "timay.dynamic-modules.v74";
 
 interface NewModuleInput {
   name: string;
@@ -302,6 +302,20 @@ function specialTables(): DynamicModule[] {
         { id: "ur2", ad: "Danışmanlık (Saatlik)", kod: "URN-002", kategori: "Danışmanlık", birim: "Saat", birim_fiyat: 2500, kdv: "%20", durum: "Aktif", aciklama: "" },
         { id: "ur3", ad: "Mobil Uygulama Geliştirme", kod: "URN-003", kategori: "Hizmet", birim: "Paket", birim_fiyat: 350000, kdv: "%20", durum: "Aktif", aciklama: "Proje bazlı." },
       ],
+    ),
+    mkTbl("T-0086", "Defter Hareketleri",
+      "Defterler arası bağlantı günlüğü · her defter hareketi (toplantı, kasa, görev, not…) ilgili varlığa (proje/kullanıcı/cari/dava) bağlanır; Proje Defteri ve diğer defterler bu tablodan beslenir.", "BookMarked",
+      [
+        { code: "tarih", name: "Tarih", type: "DATE", required: true, visibility: "EVERYONE" },
+        { code: "kaynak", name: "Kaynak Defter", type: "DROPDOWN", required: true, visibility: "EVERYONE", options: ["Toplantı Defteri", "Kasa Defteri", "Görev Defteri", "Not Defteri", "Proje Defteri", "Hukuk Defteri", "Ajanda", "Finans"] },
+        { code: "hareket", name: "Hareket", type: "TEXT", required: true, visibility: "EVERYONE" },
+        { code: "ilgili_tur", name: "İlgili Tür", type: "DROPDOWN", required: true, visibility: "EVERYONE", options: ["Proje", "Kullanıcı", "Cari", "Dava", "Müvekkil", "Avukat", "Masraf", "Kasa/Banka"] },
+        { code: "ilgili", name: "İlgili", type: "TEXT", required: true, visibility: "EVERYONE" },
+        { code: "tutar", name: "Tutar (₺)", type: "NUMBER", required: false, visibility: "EVERYONE" },
+        { code: "aciklama", name: "Açıklama", type: "TEXTAREA", required: false, visibility: "EVERYONE" },
+        { code: "ref", name: "Kaynak Ref", type: "TEXT", required: false, visibility: "ONLY_MANAGERS" },
+      ],
+      [],
     ),
     mkTbl("T-0083", "Müvekkiller",
       "Müvekkil kartları · iletişim · cari bakiye · bağlı dosyalar.", "Users",

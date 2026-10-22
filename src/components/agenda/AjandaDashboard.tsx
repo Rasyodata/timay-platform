@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Printer, Plus, X, AlertCircle, FileText, CheckSquare, Bell, Sun, Folder, Search, TrendingUp, BookOpen, Send, Trash2, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Printer, Plus, X, AlertCircle, FileText, CheckSquare, Bell, BellRing, Sun, Folder, Search, TrendingUp, BookOpen, Send, Trash2, CheckCircle2 } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
 import { RecordForm } from "@/components/projects/ProjectTableCard";
 import TalepForm from "@/components/requests/TalepForm";
+import HatirlatmaModal from "@/components/agenda/HatirlatmaModal";
 import type { DynamicRecord, DynamicModule } from "@/types/modules";
 import type { View } from "@/App";
 
@@ -34,6 +35,7 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
   const [cur, setCur] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); });
   const [modal, setModal] = useState<{ mod: DynamicModule; rec: DynamicRecord | "new"; defaults?: Record<string, unknown> } | null>(null);
   const [talepModal, setTalepModal] = useState(false);
+  const [hatirlatma, setHatirlatma] = useState<{ date?: string } | null>(null);
   const [q, setQ] = useState("");
   // Deftere hızlı not
   const [noteText, setNoteText] = useState("");
@@ -62,7 +64,7 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
   const talepMod = getModule("mod-T-0076");
   // Projeye özel filtre: kayıt içeriğinde proje adı geçenler
   const pf = (projeFilter ?? "").trim().toLocaleLowerCase("tr");
-  const matchP = (r: DynamicRecord) => !pf || [r.baslik, r.ad, r.kategori, r.sprint, r.konum, r.toplanti, r.aciklama].some((v) => String(v ?? "").toLocaleLowerCase("tr").includes(pf));
+  const matchP = (r: DynamicRecord) => !pf || [r.baslik, r.ad, r.kategori, r.sprint, r.konum, r.toplanti, r.aciklama, r.proje].some((v) => String(v ?? "").toLocaleLowerCase("tr").includes(pf));
   const aj = ((ajMod?.records ?? []) as DynamicRecord[]).filter(matchP);
   const ev = ((evMod?.records ?? []) as DynamicRecord[]).filter(matchP);
   const notlar = ((notMod?.records ?? []) as DynamicRecord[]).filter(matchP);
@@ -113,6 +115,7 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
     else if (kind === "not" && notMod) setModal({ mod: notMod, rec: "new", defaults: { renk: "Sarı", tarih: date, ...pfBaslik } });
     else if (kind === "dosya" && dosMod) setModal({ mod: dosMod, rec: "new" });
     else if (kind === "talep") setTalepModal(true);
+    else if (kind === "hatirlatma") setHatirlatma({ date });
     else if (kind === "tutanak") onNavigate("tutanak");
   };
 
@@ -159,6 +162,7 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
           { label: "Görev Ekle", icon: CheckSquare, kind: "gorev" },
           { label: "Etkinlik Ekle", icon: Sun, kind: "etkinlik" },
           { label: "Not Ekle", icon: FileText, kind: "not" },
+          { label: "Hatırlatma", icon: BellRing, kind: "hatirlatma" },
           { label: "Dosya Ekle", icon: Folder, kind: "dosya" },
           { label: "Talep Ekle", icon: AlertCircle, kind: "talep" },
           { label: "Tutanak", icon: Bell, kind: "tutanak" },
@@ -406,6 +410,8 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
           </div>
         </div>
       )}
+
+      {hatirlatma && <HatirlatmaModal defaultDate={hatirlatma.date} onClose={() => setHatirlatma(null)} />}
     </div>
   );
 }

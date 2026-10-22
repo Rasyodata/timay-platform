@@ -4,6 +4,17 @@ import { Wallet, ChevronLeft, ChevronRight, Plus, Trash2, Printer, Mail, ArrowDo
 import { useUsers } from "@/context/UsersContext";
 import { useModules } from "@/context/ModulesContext";
 import { openReport } from "@/lib/tableReport";
+import { useDefterHareketi } from "@/hooks/useDefterHareketi";
+
+// Kasa türü → Defter Hareketleri "İlgili Tür"
+const turToIlgiliTur = (tur: string): string =>
+  /Cari|Tedarikçi|Tahsilat/.test(tur) ? "Cari"
+  : tur === "Dava" ? "Dava"
+  : /Masraf|Vergi/.test(tur) ? "Masraf"
+  : tur === "Personel" ? "Kullanıcı"
+  : tur === "Avukat" ? "Avukat"
+  : /Kasa|Banka/.test(tur) ? "Kasa/Banka"
+  : "Cari";
 
 const STORAGE_KEY = "timay.kasa-defteri.v3";
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -100,6 +111,7 @@ function SearchSelect({ value, onChange, options, placeholder }: { value: string
 export default function KasaDefteri() {
   const { currentUser, users } = useUsers();
   const { addRecord, getModule } = useModules();
+  const logHareket = useDefterHareketi();
   const davalar = (getModule("mod-T-0016")?.records ?? []) as Array<Record<string, unknown>>;
   const avukatlar = (getModule("mod-T-0017")?.records ?? []) as Array<Record<string, unknown>>;
   const kasalar = (getModule("mod-T-0006")?.records ?? []) as Array<Record<string, unknown>>;
@@ -202,8 +214,18 @@ export default function KasaDefteri() {
       else if (hedefMod === "mod-T-0084") data.dosya_no = ilg.split(" · ")[0];
     }
     addRecord(hedefMod, data);
+    // Defterler arası bağlantı: ilgili varlığın defterine de düşsün (örn. cari/dava/proje/masraf)
+    if (ilg) {
+      logHareket({
+        tarih: r.tarih || curStr, kaynak: "Kasa Defteri",
+        hareket: `${r.yon} · ${r.aciklama || r.tur}`,
+        ilgili_tur: turToIlgiliTur(r.tur || ""), ilgili: ilg,
+        tutar: Number(r.tutar), aciklama: `${currentUser.name} kasası · ${r.aciklama || r.tur}`,
+        ref: `kasa-${r.id}`,
+      });
+    }
     updEntry(r.id, { propagated: true, hedefMod });
-    setNote(`"${r.aciklama || r.tur}" ${tl(Number(r.tutar))} finans tablosuna işlendi ✓`);
+    setNote(`"${r.aciklama || r.tur}" ${tl(Number(r.tutar))} finans + ilgili deftere işlendi ✓`);
     window.setTimeout(() => setNote(""), 2800);
   };
 

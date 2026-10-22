@@ -11,6 +11,7 @@ import { useUsers } from "@/context/UsersContext";
 import type { DynamicRecord } from "@/types/modules";
 import type { View } from "@/App";
 import { openDocReport } from "@/lib/tableReport";
+import { useDefterHareketi } from "@/hooks/useDefterHareketi";
 
 const MOD = "mod-T-0063";
 const HAND = "'Patrick Hand', 'Comic Sans MS', ui-rounded, cursive";
@@ -131,6 +132,7 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
   const { getModule, addRecord, updateRecord, deleteRecord } = useModules();
   const { projects } = useProjects();
   const { users } = useUsers();
+  const logHareket = useDefterHareketi();
   const mod = getModule(MOD);
   const recs = (mod?.records ?? []) as DynamicRecord[];
   const avukatlar = (getModule("mod-T-0017")?.records ?? []) as DynamicRecord[];
@@ -301,7 +303,15 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
     const body = encodeURIComponent(tutanakText());
     window.location.href = `mailto:?subject=${subj}&body=${body}`;
   };
-  const kaydet = () => { setEdit(false); setSaved(true); window.setTimeout(() => setSaved(false), 2000); };
+  const kaydet = () => {
+    // Defterler arası bağlantı: toplantıdaki proje/avukat/katılımcılar ilgili defterlerine düşsün
+    const baslik = `Toplantı: ${String(sel.toplanti || sel.tutanak_no || "")}`;
+    const ortak = { tarih: String(sel.tarih || ""), kaynak: "Toplantı Defteri", hareket: baslik, aciklama: `${String(sel.tutanak_no || "")}${sel.yer ? " · " + String(sel.yer) : ""}` } as const;
+    if (sel.proje) logHareket({ ...ortak, ilgili_tur: "Proje", ilgili: String(sel.proje), ref: `tutanak-${sel.id}-proje` });
+    if (sel.avukat) logHareket({ ...ortak, ilgili_tur: "Avukat", ilgili: String(sel.avukat), ref: `tutanak-${sel.id}-avukat` });
+    katilimcilar.forEach((k, i) => logHareket({ ...ortak, ilgili_tur: "Kullanıcı", ilgili: k, ref: `tutanak-${sel.id}-kat-${i}` }));
+    setEdit(false); setSaved(true); window.setTimeout(() => setSaved(false), 2000);
+  };
 
   const inp = "rounded border border-black/15 bg-white/80 px-2 py-0.5 text-ink outline-none focus:border-neon-blue";
   const SectionTitle = ({ icon: Icon, children, c }: { icon: typeof Target; children: ReactNode; c: string }) => (

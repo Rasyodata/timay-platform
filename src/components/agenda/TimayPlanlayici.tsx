@@ -6,6 +6,7 @@ import {
 import { useModules } from "@/context/ModulesContext";
 import { RecordForm } from "@/components/projects/ProjectTableCard";
 import TalepForm from "@/components/requests/TalepForm";
+import HatirlatmaModal from "@/components/agenda/HatirlatmaModal";
 import type { DynamicRecord } from "@/types/modules";
 import type { View } from "@/App";
 
@@ -33,6 +34,7 @@ const SEKMELER: { label: string; renk: string; addMod: string; defaults?: Record
   { label: "Etkinlik", renk: "#0d9488", addMod: "mod-T-0060" },
   { label: "Görüşme", renk: "#0E7490", addMod: "mod-T-0060", defaults: { tur: "Görüşme" } },
   { label: "Not", renk: "#C96A86", addMod: "mod-T-0068" },
+  { label: "Hatırlatma", renk: "#7C3AED", addMod: "HATIRLATMA" },
   { label: "Fikir", renk: "#CA8A04", addMod: "mod-T-0066" },
   { label: "Tutanak", renk: "#5B8DB8", addMod: "mod-T-0063" },
   { label: "İlaç", renk: "#9333EA", addMod: "mod-T-0057", defaults: { baslik: "İlaç — " } },
@@ -51,6 +53,7 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
   const [ilacInput, setIlacInput] = useState("");
   const [addModal, setAddModal] = useState<{ modId: string; baslik: string; defaults?: Record<string, unknown>; rec?: DynamicRecord } | null>(null);
   const [noteText, setNoteText] = useState("");
+  const [hatirlatma, setHatirlatma] = useState<{ date?: string } | null>(null);
   const [dragSek, setDragSek] = useState<string | null>(null);
   const noteRef = useRef<HTMLInputElement>(null);
 
@@ -76,6 +79,7 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
   // Hızlı İşlem — ilgili tabloya kayıt aç (seçili güne). "Yaz" → deftere not yaz alanına odaklan
   const addSekme = (s: typeof SEKMELER[number]) => {
     if (s.addMod === "YAZ") { noteRef.current?.focus(); noteRef.current?.scrollIntoView({ block: "center" }); return; }
+    if (s.addMod === "HATIRLATMA") { setHatirlatma({ date: curStr }); return; }
     const base = s.addMod === "mod-T-0068" ? { renk: "Sarı", tarih: curStr } : { tarih: curStr };
     setAddModal({ modId: s.addMod, baslik: s.label, defaults: { ...base, ...(s.defaults ?? {}) } });
   };
@@ -259,6 +263,8 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
           </div>
         </div>
       )}
+
+      {hatirlatma && <HatirlatmaModal defaultDate={hatirlatma.date} onClose={() => setHatirlatma(null)} />}
     </div>
   );
 }
