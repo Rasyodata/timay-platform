@@ -62,6 +62,21 @@ const alanLabel = (tur: string): string =>
 
 const lc = (s: string) => s.toLocaleLowerCase("tr");
 
+/** Muhasebe tarzı tutar girişi — odakta düz yazılır, odaktan çıkınca binlik ayraçlı (1.234,56) gösterilir. */
+function TutarInput({ value, onChange, onBlur, className, placeholder }: { value: number; onChange: (n: number) => void; onBlur?: () => void; className?: string; placeholder?: string }) {
+  const [focused, setFocused] = useState(false);
+  const [draft, setDraft] = useState("");
+  const fmt = (n: number) => (n || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const parse = (s: string) => { const c = s.replace(/\s/g, "").replace(/\./g, "").replace(",", "."); const n = parseFloat(c); return isNaN(n) ? 0 : n; };
+  const display = focused ? draft : (value ? fmt(value) : "");
+  return (
+    <input type="text" inputMode="decimal" value={display} placeholder={placeholder} className={className}
+      onFocus={() => { setFocused(true); setDraft(value ? String(value).replace(".", ",") : ""); }}
+      onChange={(e) => { setDraft(e.target.value); onChange(parse(e.target.value)); }}
+      onBlur={() => { setFocused(false); onBlur?.(); }} />
+  );
+}
+
 /** Aranabilir açılır seçici — çok kayıt olunca yaz-filtrele; dropdown portal ile taşmadan açılır. */
 function SearchSelect({ value, onChange, options, placeholder }: { value: string; onChange: (v: string) => void; options: string[]; placeholder: string }) {
   const [open, setOpen] = useState(false);
@@ -356,12 +371,12 @@ export default function KasaDefteri() {
                     <td className="px-1 py-1"><input value={r.aciklama} onChange={(ev) => updEntry(r.id, { aciklama: ev.target.value })} placeholder="Açıklama" className={inp} /></td>
                     <td className="px-1 py-1">
                       {r.yon === "Giren"
-                        ? <div className="flex items-center gap-0.5"><input value={r.tutar || ""} onChange={(ev) => updEntry(r.id, { tutar: Number(ev.target.value) || 0 })} onBlur={() => propagate(r)} type="number" placeholder="0,00" className={`${inp} text-right nums text-good ${r.hedefMod && !r.propagated ? "border-amber-300" : ""}`} /><span className="shrink-0 text-[10px] font-semibold text-good/70">₺</span></div>
+                        ? <div className="flex items-center gap-0.5"><TutarInput value={r.tutar || 0} onChange={(n) => updEntry(r.id, { tutar: n })} onBlur={() => propagate(r)} placeholder="0,00" className={`${inp} text-right nums text-good ${r.hedefMod && !r.propagated ? "border-amber-300" : ""}`} /><span className="shrink-0 text-[10px] font-semibold text-good/70">₺</span></div>
                         : <span className="block px-2 text-right text-[11px] text-ink/25">—</span>}
                     </td>
                     <td className="px-1 py-1">
                       {r.yon === "Çıkan"
-                        ? <div className="flex items-center gap-0.5"><input value={r.tutar || ""} onChange={(ev) => updEntry(r.id, { tutar: Number(ev.target.value) || 0 })} onBlur={() => propagate(r)} type="number" placeholder="0,00" className={`${inp} text-right nums text-critical ${r.hedefMod && !r.propagated ? "border-amber-300" : ""}`} /><span className="shrink-0 text-[10px] font-semibold text-critical/70">₺</span></div>
+                        ? <div className="flex items-center gap-0.5"><TutarInput value={r.tutar || 0} onChange={(n) => updEntry(r.id, { tutar: n })} onBlur={() => propagate(r)} placeholder="0,00" className={`${inp} text-right nums text-critical ${r.hedefMod && !r.propagated ? "border-amber-300" : ""}`} /><span className="shrink-0 text-[10px] font-semibold text-critical/70">₺</span></div>
                         : <span className="block px-2 text-right text-[11px] text-ink/25">—</span>}
                     </td>
                     <td className="px-2 py-1 text-right nums text-[11px] font-semibold text-ink">{tl(bakiye)}</td>
