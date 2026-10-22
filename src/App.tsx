@@ -23,6 +23,7 @@ import DosyaKutuphanesi from "@/components/docs/DosyaKutuphanesi";
 import GorevYonetimi from "@/components/tasks/GorevYonetimi";
 import NotesPage from "@/components/notes/NotesPage";
 import TutanakNotebook from "@/components/notes/TutanakNotebook";
+import KasaDefteri from "@/components/kasa/KasaDefteri";
 import OnaylarPage from "@/components/approvals/OnaylarPage";
 import TimayAkademi from "@/components/academy/TimayAkademi";
 import IKYonetimi from "@/components/academy/IKYonetimi";
@@ -57,6 +58,7 @@ export type View =
   | "gorev-yonetimi"
   | "notlar"
   | "tutanak"
+  | "kasa-defteri"
   | "onaylar"
   | "akademi"
   | "ik"
@@ -122,7 +124,7 @@ function DashboardShell() {
             <div className="flex min-w-0 flex-1 flex-col">
               <Navbar onMenu={() => setMobileOpen(true)} onNavigate={navigate} view={view} activeWs={activeWs} />
               <main
-                className={`flex-1 overflow-x-hidden${["ajandam", "ajanda", "planlayici", "gorev-yonetimi", "onaylar", "users", "roles", "notlar", "tutanak", "dosya-kutuphanesi"].includes(view) ? " dense-zoom" : ""}`}
+                className={`flex-1 overflow-x-hidden${["ajandam", "ajanda", "planlayici", "gorev-yonetimi", "onaylar", "users", "roles", "notlar", "tutanak", "kasa-defteri", "dosya-kutuphanesi"].includes(view) ? " dense-zoom" : ""}`}
               >
                 {view === "finans-merkezi" && <FinansMerkezi onNavigate={navigate} />}
                 {view === "karar-merkezi" && <KararMerkezi onNavigate={navigate} />}
@@ -138,6 +140,7 @@ function DashboardShell() {
                 {view === "gorev-yonetimi" && <GorevYonetimi onNavigate={navigate} />}
                 {view === "notlar" && <NotesPage onNavigate={navigate} />}
                 {view === "tutanak" && <TutanakNotebook onNavigate={navigate} />}
+                {view === "kasa-defteri" && <KasaDefteri />}
                 {view === "onaylar" && <OnaylarPage onNavigate={navigate} />}
                 {view === "akademi" && <TimayAkademi onNavigate={navigate} />}
                 {view === "ik" && <IKYonetimi onNavigate={navigate} />}

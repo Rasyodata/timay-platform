@@ -291,7 +291,7 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
           {onNavigate && (
             <button onClick={() => onNavigate("ajandam")} className="flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-sm text-muted transition hover:bg-elevated hover:text-ink"><ChevronLeft size={15} /> Ajanda</button>
           )}
-          <h1 className="flex items-center gap-2 text-xl font-bold text-ink">Toplantı Tutanakları <span className="rounded-md border border-line bg-base/60 px-1.5 py-0.5 font-mono text-[10px] font-normal text-muted">T-0063</span></h1>
+          <h1 className="flex items-center gap-2 text-xl font-bold text-ink">Toplantı Defteri <span className="rounded-md border border-line bg-base/60 px-1.5 py-0.5 font-mono text-[10px] font-normal text-muted">T-0063</span></h1>
           {/* Önceki / Sonraki toplantı tutanağı */}
           <div className="ml-1 flex items-center gap-1.5">
             <button onClick={goPrev} disabled={idx <= 0} className="flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-sm text-muted transition hover:bg-elevated hover:text-ink disabled:opacity-40"><ChevronLeft size={15} /> Önceki Toplantı Tutanağı</button>
