@@ -98,8 +98,8 @@ export default function TaleplerMerkezi(_props: { onNavigate?: (v: View) => void
         <div className="flex items-center gap-2.5">
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-neon-blue/10 text-neon-blue"><Inbox size={20} /></span>
           <div>
-            <h1 className="flex items-center gap-2 text-xl font-bold text-ink">Talepler Merkezi <span className="rounded-md border border-line bg-base/60 px-1.5 py-0.5 font-mono text-[10px] font-normal text-muted">T-0076</span></h1>
-            <p className="text-xs text-muted">{sayac.Yeni + sayac.İncelemede} açık talep · tüm türler tek yerde</p>
+            <h1 className="flex items-center gap-2 text-2xl font-bold text-ink"><Inbox size={22} className="text-neon-blue" /> Talepler Merkezi <span className="rounded-md border border-line bg-base/60 px-1.5 py-0.5 font-mono text-[11px] font-normal text-muted">T-0076</span></h1>
+            <p className="mt-1 text-sm text-muted">{sayac.Yeni + sayac.İncelemede} açık talep · tüm türler tek yerde</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

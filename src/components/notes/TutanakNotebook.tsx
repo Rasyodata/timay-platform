@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import {
   Users, MapPin, ClipboardList, Target, Gavel, AlertTriangle, CheckSquare, Square,
   CheckCircle2, Plus, Pencil, Check, ChevronLeft, ChevronRight, Search, X, Trash2,
-  Printer, Mail, Save, FolderKanban, Scale, Briefcase, MessageSquare,
+  Printer, Mail, Save, FolderKanban, Scale, Briefcase, MessageSquare, NotebookPen,
 } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
 import { useProjects } from "@/context/ProjectsContext";
@@ -248,8 +248,25 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
     { key: "aksiyonlar", label: "Aksiyon", icon: CheckCircle2, c: "#86EFAC", add: () => setAks([...aksArr, { is: "Yeni iş", sor: "", trh: "", drm: "Bekliyor" }]) },
   ];
   const quickAdd = (key: string) => { setEdit(true); setAdded((p) => new Set(p).add(key)); SECTIONS.find((s) => s.key === key)?.add(); };
+  // Bölümü defterden çıkar (sürükleyip dışarı atınca) — alanı temizler
+  const [dragRemove, setDragRemove] = useState<string | null>(null);
+  const FIELD_OF: Record<string, string> = { konu: "toplanti", onemli: "onemli_notlar" };
+  const clearSection = (key: string) => {
+    setEdit(true);
+    UP({ [FIELD_OF[key] ?? key]: "" });
+    setAdded((p) => { const n = new Set(p); n.delete(key); return n; });
+  };
   // Bir bölüm gösterilsin mi? (içeriği var ya da eklendi)
   const act = (key: string, arr: { length: number }) => arr.length > 0 || added.has(key);
+  const actS = (key: string, val: unknown) => (!!val && String(val).trim() !== "") || added.has(key);
+  // Künye alanları da Hızlı Ekle'den eklenir (yerleşik sadece No/Tarih/Saat)
+  const KUNYE = [
+    { key: "konu", label: "Konu", icon: Users, c: "#93C5FD" },
+    { key: "yer", label: "Yer", icon: MapPin, c: "#FDE68A" },
+    { key: "proje", label: "Proje", icon: FolderKanban, c: "#86EFAC" },
+    { key: "is_gorev", label: "İş / Görev", icon: Briefcase, c: "#FCA5A5" },
+    { key: "avukat", label: "Sorumlu Avukat", icon: Scale, c: "#C4B5FD" },
+  ];
 
   // Tutanağın düz metin dökümü — yazdır ve mail için
   const tutanakText = () => {
@@ -326,8 +343,9 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
   };
 
   const inp = "rounded border border-black/15 bg-white/80 px-2 py-0.5 text-ink outline-none focus:border-neon-blue";
-  const SectionTitle = ({ icon: Icon, children, c }: { icon: typeof Target; children: ReactNode; c: string }) => (
-    <h3 className="mb-2 flex items-center gap-2 text-[22px] font-bold text-ink">
+  const SectionTitle = ({ icon: Icon, children, c, sec }: { icon: typeof Target; children: ReactNode; c: string; sec?: string }) => (
+    <h3 draggable={!!sec} onDragStart={sec ? (e) => { e.stopPropagation(); setDragRemove(sec); } : undefined} onDragEnd={() => setDragRemove(null)}
+      className={`mb-2 flex items-center gap-2 text-[22px] font-bold text-ink ${sec ? "cursor-grab active:cursor-grabbing" : ""}`} title={sec ? "Silmek için sola sürükleyin" : undefined}>
       <Icon size={18} style={{ color: c }} />
       <span className="rounded px-1.5" style={{ background: c + "55" }}>{children}</span>
     </h3>
@@ -342,7 +360,7 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
           {onNavigate && (
             <button onClick={() => onNavigate("ajandam")} className="flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-sm text-muted transition hover:bg-elevated hover:text-ink"><ChevronLeft size={15} /> Ajanda</button>
           )}
-          <h1 className="flex items-center gap-2 text-xl font-bold text-ink">Toplantı Defteri <span className="rounded-md border border-line bg-base/60 px-1.5 py-0.5 font-mono text-[10px] font-normal text-muted">T-0063</span></h1>
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-ink"><NotebookPen size={22} className="text-neon-blue" /> Toplantı Defteri <span className="rounded-md border border-line bg-base/60 px-1.5 py-0.5 font-mono text-[11px] font-normal text-muted">T-0063</span></h1>
           {/* Önceki / Sonraki toplantı tutanağı */}
           <div className="ml-1 flex items-center gap-1.5">
             <button onClick={goPrev} disabled={idx <= 0} className="flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-sm text-muted transition hover:bg-elevated hover:text-ink disabled:opacity-40"><ChevronLeft size={15} /> Önceki Toplantı Tutanağı</button>
@@ -369,22 +387,44 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
       </div>
 
       <div className="flex items-stretch gap-3">
-        {/* SOL — Hızlı Ekle: tıkla ya da deftere sürükle bırak */}
+        {/* SOL — Hızlı Ekle: tıkla ya da deftere sürükle; silmek için buraya geri sürükle */}
         <div className="w-44 shrink-0">
-          <div className="sticky top-4 rounded-xl border-2 border-dashed border-neon-blue/40 bg-neon-blue/5 p-3">
-            <p className="mb-2 flex items-center gap-1.5 text-[15px] font-bold text-ink"><Plus size={16} className="text-neon-blue" /> Hızlı Ekle</p>
-            <p className="mb-2.5 text-[11px] text-ink/50">Tıkla ya da deftere <b className="text-ink/70">sürükle bırak</b> — o başlıkla alan açılır.</p>
-            <div className="flex flex-col gap-1.5">
-              {SECTIONS.map((s) => (
-                <button key={s.key}
-                  draggable onDragStart={() => setDragSec(s.key)} onDragEnd={() => setDragSec(null)}
-                  onClick={() => quickAdd(s.key)}
-                  className={`flex cursor-grab items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-left text-[13px] font-semibold text-ink transition hover:-translate-y-0.5 active:cursor-grabbing ${dragSec === s.key ? "opacity-40" : ""}`}
-                  style={{ background: s.c + "33", borderColor: s.c }}>
-                  <s.icon size={13} className="shrink-0" /> {s.label}
-                </button>
-              ))}
-            </div>
+          <div
+            onDragOver={dragRemove ? (e) => e.preventDefault() : undefined}
+            onDrop={dragRemove ? (e) => { e.preventDefault(); clearSection(dragRemove); setDragRemove(null); } : undefined}
+            className={`sticky top-4 rounded-xl border-2 border-dashed p-3 transition ${dragRemove ? "border-critical bg-critical/10" : "border-neon-blue/40 bg-neon-blue/5"}`}>
+            {dragRemove ? (
+              <p className="flex flex-col items-center gap-1 py-6 text-center text-[13px] font-bold text-critical"><Trash2 size={22} /> Silmek için buraya bırak</p>
+            ) : (
+              <>
+                <p className="mb-2 flex items-center gap-1.5 text-[15px] font-bold text-ink"><Plus size={16} className="text-neon-blue" /> Hızlı Ekle</p>
+                <p className="mb-2 text-[11px] text-ink/50">Tıkla ya da deftere <b className="text-ink/70">sürükle</b> — o başlıkla alan açılır. Silmek için başlığı tutup <b className="text-ink/70">buraya sürükle</b>.</p>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-ink/40">Künye</p>
+                <div className="mb-2 flex flex-col gap-1.5">
+                  {KUNYE.map((s) => (
+                    <button key={s.key}
+                      draggable onDragStart={() => setDragSec(s.key)} onDragEnd={() => setDragSec(null)}
+                      onClick={() => quickAdd(s.key)}
+                      className={`flex cursor-grab items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-left text-[13px] font-semibold text-ink transition hover:-translate-y-0.5 active:cursor-grabbing ${dragSec === s.key ? "opacity-40" : ""}`}
+                      style={{ background: s.c + "33", borderColor: s.c }}>
+                      <s.icon size={13} className="shrink-0" /> {s.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-ink/40">Bölümler</p>
+                <div className="flex flex-col gap-1.5">
+                  {SECTIONS.map((s) => (
+                    <button key={s.key}
+                      draggable onDragStart={() => setDragSec(s.key)} onDragEnd={() => setDragSec(null)}
+                      onClick={() => quickAdd(s.key)}
+                      className={`flex cursor-grab items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-left text-[13px] font-semibold text-ink transition hover:-translate-y-0.5 active:cursor-grabbing ${dragSec === s.key ? "opacity-40" : ""}`}
+                      style={{ background: s.c + "33", borderColor: s.c }}>
+                      <s.icon size={13} className="shrink-0" /> {s.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -419,24 +459,34 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
               </div>
 
               <div className="space-y-1.5 text-[18px]">
-                <p className="flex items-center gap-2"><Users size={17} className="shrink-0 text-ink/70" /><b>Konu</b> :
+                {actS("konu", sel.toplanti) && (
+                <p className="flex items-center gap-2"><Users size={17} className="shrink-0 text-ink/70" /><b draggable onDragStart={(e) => { e.stopPropagation(); setDragRemove("konu"); }} onDragEnd={() => setDragRemove(null)} className="cursor-grab" title="Silmek için sola sürükleyin">Konu</b> :
                   {edit ? <MentionInput value={String(sel.toplanti || "")} onChange={(v) => UP({ toplanti: v })} className={`${inp} w-full text-[17px]`} style={{ fontFamily: HAND }} /> : <span>{String(sel.toplanti)}</span>}
                 </p>
-                <p className="flex items-center gap-2"><MapPin size={17} className="shrink-0 text-ink/70" /><b>Yer</b> :
+                )}
+                {actS("yer", sel.yer) && (
+                <p className="flex items-center gap-2"><MapPin size={17} className="shrink-0 text-ink/70" /><b draggable onDragStart={(e) => { e.stopPropagation(); setDragRemove("yer"); }} onDragEnd={() => setDragRemove(null)} className="cursor-grab" title="Silmek için sola sürükleyin">Yer</b> :
                   {edit ? <input value={String(sel.yer || "")} onChange={(e) => UP({ yer: e.target.value })} placeholder="Toplantı yeri" className={`${inp} flex-1 text-[17px]`} style={{ fontFamily: HAND }} /> : <span>{String(sel.yer || "—")}</span>}
                 </p>
-                <p className="flex items-center gap-2"><FolderKanban size={17} className="shrink-0 text-ink/70" /><b>Proje</b> :
+                )}
+                {actS("proje", sel.proje) && (
+                <p className="flex items-center gap-2"><FolderKanban size={17} className="shrink-0 text-ink/70" /><b draggable onDragStart={(e) => { e.stopPropagation(); setDragRemove("proje"); }} onDragEnd={() => setDragRemove(null)} className="cursor-grab" title="Silmek için sola sürükleyin">Proje</b> :
                   {edit ? <select value={String(sel.proje || "")} onChange={(e) => UP({ proje: e.target.value })} className={`${inp} flex-1 text-[16px]`} style={{ fontFamily: HAND }}><option value="">— Proje seç —</option>{projects.map((p) => <option key={p.id} value={`${p.code} · ${p.name}`}>{p.code} · {p.name}</option>)}</select> : <span>{String(sel.proje || "—")}</span>}
                 </p>
-                <p className="flex items-center gap-2"><Briefcase size={17} className="shrink-0 text-ink/70" /><b>İş / Görev</b> :
+                )}
+                {actS("is_gorev", sel.is_gorev) && (
+                <p className="flex items-center gap-2"><Briefcase size={17} className="shrink-0 text-ink/70" /><b draggable onDragStart={(e) => { e.stopPropagation(); setDragRemove("is_gorev"); }} onDragEnd={() => setDragRemove(null)} className="cursor-grab" title="Silmek için sola sürükleyin">İş / Görev</b> :
                   {edit ? <MentionInput value={String(sel.is_gorev || "")} onChange={(v) => UP({ is_gorev: v })} placeholder="İş / görev — yazarken proje/görev önerilir" className={`${inp} w-full text-[16px]`} style={{ fontFamily: HAND }} /> : <span>{String(sel.is_gorev || "—")}</span>}
                 </p>
-                <p className="flex items-center gap-2"><Scale size={17} className="shrink-0 text-ink/70" /><b>Sorumlu Avukat</b> :
+                )}
+                {actS("avukat", sel.avukat) && (
+                <p className="flex items-center gap-2"><Scale size={17} className="shrink-0 text-ink/70" /><b draggable onDragStart={(e) => { e.stopPropagation(); setDragRemove("avukat"); }} onDragEnd={() => setDragRemove(null)} className="cursor-grab" title="Silmek için sola sürükleyin">Sorumlu Avukat</b> :
                   {edit ? <select value={String(sel.avukat || "")} onChange={(e) => UP({ avukat: e.target.value })} className={`${inp} flex-1 text-[16px]`} style={{ fontFamily: HAND }}><option value="">— Avukat seç —</option>{avukatlar.map((a) => <option key={String(a.id)} value={String(a.avukat)}>{String(a.avukat)}</option>)}</select> : <span>{String(sel.avukat || "—")}</span>}
                 </p>
+                )}
                 {act("katilimcilar", katilimcilar) && (
                 <div className="flex gap-2"><ClipboardList size={17} className="mt-1 shrink-0 text-ink/70" />
-                  <div className="min-w-0 flex-1"><b>Katılımcılar :</b>
+                  <div className="min-w-0 flex-1"><b draggable onDragStart={(e) => { e.stopPropagation(); setDragRemove("katilimcilar"); }} onDragEnd={() => setDragRemove(null)} className="cursor-grab" title="Silmek için sola sürükleyin">Katılımcılar :</b>
                     {edit ? <div className="mt-1"><EditList value={String(sel.katilimcilar ?? "")} onChange={(v) => UP({ katilimcilar: v })} ph="Katılımcı ekle" /></div>
                       : <ul className="ml-3 mt-0.5 list-disc space-y-0.5 marker:text-ink/40">{katilimcilar.map((k, i) => <li key={i}>{k}</li>)}</ul>}
                   </div>
@@ -448,7 +498,7 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
               {act("amac", amac) && (
               <div className="relative float-right ml-4 mt-2 w-56 -rotate-2 rounded-sm bg-[#FEF08A] p-3 shadow-[2px_3px_8px_rgba(0,0,0,0.2)]">
                 <span className="absolute -top-2 left-1/2 h-5 w-10 rounded-sm bg-[#EADFA8]/80" style={{ transform: "translateX(-50%) rotate(-4deg)" }} />
-                <p className="mb-1 text-center text-[19px] font-bold" style={{ textDecoration: "underline", textDecorationColor: "#CA8A04" }}>Toplantı Amacı</p>
+                <p draggable onDragStart={(e) => { e.stopPropagation(); setDragRemove("amac"); }} onDragEnd={() => setDragRemove(null)} title="Silmek için sola sürükleyin" className="mb-1 cursor-grab text-center text-[19px] font-bold" style={{ textDecoration: "underline", textDecorationColor: "#CA8A04" }}>Toplantı Amacı</p>
                 {edit ? <EditList value={String(sel.amac ?? "")} onChange={(v) => UP({ amac: v })} ph="Amaç ekle" />
                   : <ul className="space-y-0.5 text-[15px]">{amac.map((a, i) => <li key={i} className="flex gap-1"><span>•</span>{a}</li>)}</ul>}
               </div>
@@ -458,7 +508,7 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
               <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
                 {act("gundem", gundem) && (
                 <div>
-                  <SectionTitle icon={ClipboardList} c="#60A5FA">Gündem</SectionTitle>
+                  <SectionTitle icon={ClipboardList} c="#60A5FA" sec="gundem">Gündem</SectionTitle>
                   {edit ? <EditList value={String(sel.gundem ?? "")} onChange={(v) => UP({ gundem: v })} ph="Gündem maddesi ekle" />
                     : <ol className="space-y-1 text-[17px]">{gundem.map((g, i) => (
                         <li key={i} className="flex items-center gap-2"><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-ink/30 text-[12px]">{i + 1}</span><span className="flex-1">{g}</span>{i < 3 ? <CheckSquare size={16} className="text-good" /> : <Square size={16} className="text-ink/30" />}</li>
@@ -467,7 +517,7 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
                 )}
                 {act("onemli", onemli) && (
                 <div>
-                  <SectionTitle icon={AlertTriangle} c="#F9A8D4">Önemli Notlar</SectionTitle>
+                  <SectionTitle icon={AlertTriangle} c="#F9A8D4" sec="onemli">Önemli Notlar</SectionTitle>
                   {edit ? <EditList value={String(sel.onemli_notlar ?? "")} onChange={(v) => UP({ onemli_notlar: v })} ph="Not ekle" />
                     : <ul className="space-y-1 text-[16px]">{onemli.map((n, i) => <li key={i} className="flex gap-1.5"><span className="text-ink/50">•</span><span>{n}</span></li>)}</ul>}
                 </div>
@@ -477,7 +527,7 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
 
               {act("gorusulen", gorusulen) && (
               <div className="mt-5 clear-both">
-                <SectionTitle icon={ClipboardList} c="#86EFAC">Görüşülen Konular</SectionTitle>
+                <SectionTitle icon={ClipboardList} c="#86EFAC" sec="gorusulen">Görüşülen Konular</SectionTitle>
                 {edit ? <EditList value={String(sel.gorusulen ?? "")} onChange={(v) => UP({ gorusulen: v })} ph="Görüşülen konu ekle" />
                   : <div className="space-y-1.5 text-[16px]">{gorusulen.map((g, i) => <p key={i}>{g}</p>)}</div>}
               </div>
@@ -490,14 +540,14 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto]">
                 {act("kararlar", kararlar) && (
                 <div>
-                  <SectionTitle icon={Gavel} c="#86EFAC">Kararlar</SectionTitle>
+                  <SectionTitle icon={Gavel} c="#86EFAC" sec="kararlar">Kararlar</SectionTitle>
                   {edit ? <EditList value={String(sel.kararlar ?? "")} onChange={(v) => UP({ kararlar: v })} ph="Karar ekle" />
                     : <ol className="space-y-1 text-[17px]">{kararlar.map((k, i) => <li key={i} className="flex gap-2"><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-ink/30 text-[12px]">{i + 1}</span><span>{k}</span></li>)}</ol>}
                 </div>
                 )}
                 {act("hedefler", hedefler) && (
                 <div className="h-fit rounded-lg border-2 border-[#F0A6A6] bg-[#FDECEC]/60 p-3">
-                  <p className="mb-1.5 flex items-center gap-1.5 text-[20px] font-bold"><Target size={17} className="text-[#DC2626]" /> Hedef</p>
+                  <p draggable onDragStart={(e) => { e.stopPropagation(); setDragRemove("hedefler"); }} onDragEnd={() => setDragRemove(null)} title="Silmek için sola sürükleyin" className="mb-1.5 flex cursor-grab items-center gap-1.5 text-[20px] font-bold"><Target size={17} className="text-[#DC2626]" /> Hedef</p>
                   {edit ? <EditList value={String(sel.hedefler ?? "")} onChange={(v) => UP({ hedefler: v })} ph="Hedef ekle" sep=", " />
                     : <ul className="space-y-1 text-[16px]">{hedefler.map((h, i) => <li key={i} className="flex items-center gap-1.5"><CheckSquare size={15} className="text-good" /> {h}</li>)}</ul>}
                 </div>
@@ -507,7 +557,7 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
 
               {act("surec", surecArr) && (
               <div className="mt-5">
-                <SectionTitle icon={ClipboardList} c="#93C5FD">Süreç Akışı</SectionTitle>
+                <SectionTitle icon={ClipboardList} c="#93C5FD" sec="surec">Süreç Akışı</SectionTitle>
                 {edit ? (
                   <div className="space-y-1">
                     {surecArr.map((s, i) => (
@@ -534,14 +584,14 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
               <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
                 {act("sorumlular", sorumlular) && (
                 <div>
-                  <SectionTitle icon={Users} c="#F9A8D4">Sorumlular</SectionTitle>
+                  <SectionTitle icon={Users} c="#F9A8D4" sec="sorumlular">Sorumlular</SectionTitle>
                   {edit ? <EditList value={String(sel.sorumlular ?? "")} onChange={(v) => UP({ sorumlular: v })} ph="Ad: Sorumluluk" />
                     : <ul className="space-y-1 text-[16px]">{sorumlular.map((s, i) => { const k = s.indexOf(":"); return <li key={i} className="flex gap-1.5"><Users size={14} className="mt-1 shrink-0 text-ink/50" /><span>{k >= 0 ? <><b>{s.slice(0, k)}</b>{s.slice(k)}</> : s}</span></li>; })}</ul>}
                 </div>
                 )}
                 {act("riskler", riskler) && (
                 <div>
-                  <SectionTitle icon={AlertTriangle} c="#FDE68A">Riskler</SectionTitle>
+                  <SectionTitle icon={AlertTriangle} c="#FDE68A" sec="riskler">Riskler</SectionTitle>
                   {edit ? <EditList value={String(sel.riskler ?? "")} onChange={(v) => UP({ riskler: v })} ph="Risk ekle" />
                     : <ul className="space-y-1 text-[16px]">{riskler.map((r, i) => <li key={i} className="flex gap-1.5"><span className="text-ink/50">•</span>{r}</li>)}</ul>}
                 </div>
@@ -551,7 +601,7 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
 
               {act("aksiyonlar", aksArr) && (
               <div className="mt-5">
-                <SectionTitle icon={CheckCircle2} c="#86EFAC">Aksiyonlar</SectionTitle>
+                <SectionTitle icon={CheckCircle2} c="#86EFAC" sec="aksiyonlar">Aksiyonlar</SectionTitle>
                 {edit ? (
                   <div className="space-y-1">
                     {aksArr.map((a, i) => (

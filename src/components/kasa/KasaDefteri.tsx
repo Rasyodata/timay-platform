@@ -304,10 +304,9 @@ export default function KasaDefteri() {
   return (
     <div className="mx-auto max-w-[1440px] space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-neon-blue/10 text-neon-blue"><Wallet size={20} /></span>
         <div>
-          <h1 className="text-xl font-bold text-ink">{currentUser.name} · Kasa Defteri</h1>
-          <p className="text-xs text-muted">Kişisel kasa defteriniz · tek sayfa · yürüyen bakiye · yarına devir otomatik</p>
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-ink"><Wallet size={22} className="text-neon-blue" /> {currentUser.name} · Kasa Defteri <span className="rounded-md border border-line bg-base/60 px-1.5 py-0.5 font-mono text-[11px] font-normal text-muted">KASA</span></h1>
+          <p className="mt-1 text-sm text-muted">Kişisel kasa defteriniz · tek sayfa · yürüyen bakiye · yarına devir otomatik</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <button onClick={yazdir} className="no-print flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm text-muted transition hover:bg-elevated hover:text-ink"><Printer size={15} /> Yazdır</button>
