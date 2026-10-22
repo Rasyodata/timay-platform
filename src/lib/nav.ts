@@ -122,6 +122,13 @@ export const WORKSPACES: Workspace[] = [
       { icon: Users, label: "Kişiler", view: "users", kod: "USR", match: (v) => v === "users" || v === "roles" },
     ],
   },
+  {
+    key: "mesaj", label: "Mesaj Yönetimi", icon: MessageSquare, defaultView: "mesajlar",
+    tabs: [
+      { icon: MessageSquare, label: "Mesajlar", view: "mesajlar", kod: "T-0087" },
+      { icon: Table2, label: "Mesaj Logu", view: "mod:mod-T-0087", kod: "T-0087" },
+    ],
+  },
 ];
 
 /** Bir görünümün hangi çalışma alanına ait olduğunu bulur (yoksa null → mevcut kalır). */

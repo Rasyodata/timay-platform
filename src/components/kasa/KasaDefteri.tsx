@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Wallet, ChevronLeft, ChevronRight, Plus, Trash2, Printer, Mail, ArrowDownLeft, ArrowUpRight, Search } from "lucide-react";
+import { Wallet, ChevronLeft, ChevronRight, Plus, Trash2, Printer, Mail, ArrowDownLeft, ArrowUpRight, Search, MessageSquare } from "lucide-react";
 import { useUsers } from "@/context/UsersContext";
 import { useModules } from "@/context/ModulesContext";
 import { openReport } from "@/lib/tableReport";
@@ -271,6 +271,15 @@ export default function KasaDefteri() {
     });
   };
   const gonder = () => { window.location.href = `mailto:?subject=${encodeURIComponent(`Kasa Defteri — ${currentUser.name} — ${dmy(curStr)}`)}&body=${encodeURIComponent(defterText())}`; };
+  // Kasa raporunu yönetici(ler)e platform mesajı olarak gönder
+  const yoneticiyeGonder = () => {
+    const yon = users.filter((u) => (u.role === "owner" || u.role === "manager") && u.name !== currentUser.name && u.active);
+    if (yon.length === 0) { setNote("Gönderilecek yönetici bulunamadı."); window.setTimeout(() => setNote(""), 2800); return; }
+    const now = new Date(); const ts = `${curStr} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    yon.forEach((u) => addRecord("mod-T-0087", { tarih: ts, gonderen: currentUser.name, alici: u.name, mesaj: `📄 KASA RAPORU (PDF) — ${dmy(curStr)}\n\n${defterText()}`, okundu: false }));
+    setNote(`Kasa raporu ${yon.map((u) => u.name).join(", ")} (yönetici) kullanıcılarına mesaj olarak gönderildi ✓`);
+    window.setTimeout(() => setNote(""), 3200);
+  };
 
   const inp = "w-full rounded border border-black/10 bg-white/60 px-1.5 py-0.5 text-[11px] text-ink outline-none focus:border-neon-blue";
   const th = "px-2 py-1 text-left text-[9px] font-semibold uppercase tracking-wide text-ink/45";
@@ -288,6 +297,7 @@ export default function KasaDefteri() {
         <div className="ml-auto flex items-center gap-2">
           <button onClick={yazdir} className="no-print flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm text-muted transition hover:bg-elevated hover:text-ink"><Printer size={15} /> Yazdır</button>
           <button onClick={gonder} className="no-print flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm text-muted transition hover:bg-elevated hover:text-ink"><Mail size={15} /> Gönder</button>
+          <button onClick={yoneticiyeGonder} className="no-print flex items-center gap-1.5 rounded-lg border border-neon-blue/40 bg-neon-blue/10 px-3 py-1.5 text-sm font-medium text-neon-blue transition hover:bg-neon-blue/20"><MessageSquare size={15} /> Yöneticiye Gönder</button>
         </div>
       </div>
 
