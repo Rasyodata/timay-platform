@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { Wallet, ChevronLeft, ChevronRight, Plus, Trash2, Printer, Mail, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Wallet, ChevronLeft, ChevronRight, Plus, Trash2, Printer, Mail, ArrowDownLeft, ArrowUpRight, Search } from "lucide-react";
 import { useUsers } from "@/context/UsersContext";
 import { useModules } from "@/context/ModulesContext";
 import { openReport } from "@/lib/tableReport";
@@ -37,6 +38,64 @@ const QUICK: Quick[] = [
 
 const loadAll = (): Record<string, Book> => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch { return {}; } };
 const rid = () => "k" + Math.random().toString(36).slice(2, 9);
+
+// Türe göre "Alan" seçicisinin etiketi
+const alanLabel = (tur: string): string =>
+  /Masraf|Vergi/.test(tur) ? "Masraf ara…"
+  : tur === "Dava" ? "Dava seç…"
+  : /Cari|Tedarikçi|Tahsilat/.test(tur) ? "Cari seç…"
+  : tur === "Avukat" ? "Avukat seç…"
+  : tur === "Personel" ? "Personel seç…"
+  : /Kasa|Banka/.test(tur) ? "Kasa / Banka seç…"
+  : "Alan…";
+
+const lc = (s: string) => s.toLocaleLowerCase("tr");
+
+/** Aranabilir açılır seçici — çok kayıt olunca yaz-filtrele; dropdown portal ile taşmadan açılır. */
+function SearchSelect({ value, onChange, options, placeholder }: { value: string; onChange: (v: string) => void; options: string[]; placeholder: string }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const ref = useRef<HTMLInputElement>(null);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const openDrop = () => { if (ref.current) setRect(ref.current.getBoundingClientRect()); setQ(""); setOpen(true); };
+  const close = () => { setOpen(false); setQ(""); };
+  const filtered = q.trim() ? options.filter((o) => lc(o).includes(lc(q))) : options;
+  const inpCls = "w-full rounded border border-black/10 bg-white/70 px-2 py-1 text-[13px] text-ink outline-none focus:border-neon-blue";
+  return (
+    <>
+      <input
+        ref={ref}
+        className={inpCls}
+        value={open ? q : value}
+        placeholder={placeholder}
+        onFocus={openDrop}
+        onChange={(e) => { if (!open) openDrop(); setQ(e.target.value); }}
+        onBlur={() => window.setTimeout(close, 160)}
+      />
+      {open && rect && createPortal(
+        <div style={{ position: "fixed", top: rect.bottom + 2, left: rect.left, width: Math.max(rect.width, 220), zIndex: 9999 }}
+          className="max-h-60 overflow-auto rounded-lg border border-black/10 bg-white shadow-2xl">
+          {options.length > 7 && (
+            <div className="sticky top-0 flex items-center gap-1 border-b border-black/5 bg-white/95 px-2 py-1 text-[11px] text-ink/40"><Search size={11} /> {q.trim() ? `${filtered.length} sonuç` : `${options.length} kayıt — yazarak arayın`}</div>
+          )}
+          {value && (
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); onChange(""); close(); }} className="block w-full px-3 py-1.5 text-left text-[12px] text-ink/40 hover:bg-black/5">— temizle —</button>
+          )}
+          {filtered.length === 0 ? (
+            <div className="px-3 py-2 text-[12px] text-ink/40">Eşleşen yok</div>
+          ) : filtered.map((o) => (
+            <button key={o} type="button"
+              onMouseDown={(e) => { e.preventDefault(); onChange(o); close(); }}
+              className={`block w-full px-3 py-1.5 text-left text-[13px] hover:bg-neon-blue/10 ${o === value ? "bg-neon-blue/5 font-semibold text-neon-blue" : "text-ink"}`}>
+              {o}
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
 
 export default function KasaDefteri() {
   const { currentUser, users } = useUsers();
@@ -167,7 +226,7 @@ export default function KasaDefteri() {
         { label: "Yarına Devir", value: tl(yarinaDevir), tone: yarinaDevir < 0 ? "neg" : "accent" },
       ],
       columns: [
-        { label: "Tarih" }, { label: "Yön" }, { label: "Tür" }, { label: "İlgili" }, { label: "Açıklama" },
+        { label: "Tarih" }, { label: "Yön" }, { label: "Tür" }, { label: "Alan" }, { label: "Açıklama" },
         { label: "Giren", align: "right" }, { label: "Çıkan", align: "right" }, { label: "Bakiye", align: "right" },
       ],
       rows: withBal.map(({ e, bakiye }) => [
@@ -234,7 +293,7 @@ export default function KasaDefteri() {
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-black/10 bg-black/[0.02]">
-                  <th className={`${th} w-[92px]`}>Tarih</th><th className={`${th} w-20`}>Yön</th><th className={`${th} w-24`}>Tür</th><th className={`${th} w-32`}>İlgili</th>
+                  <th className={`${th} w-[92px]`}>Tarih</th><th className={`${th} w-20`}>Yön</th><th className={`${th} w-24`}>Tür</th><th className={`${th} w-36`}>Alan</th>
                   <th className={th}>Açıklama</th><th className={`${th} w-24 text-right`}>Giren</th><th className={`${th} w-24 text-right`}>Çıkan</th><th className={`${th} w-28 text-right`}>Bakiye</th><th className="w-6" />
                 </tr>
               </thead>
@@ -254,9 +313,7 @@ export default function KasaDefteri() {
                     </td>
                     <td className="px-1 py-1">
                       {iOpts.length > 0 ? (
-                        <select value={r.ilgili || ""} onChange={(ev) => updEntry(r.id, { ilgili: ev.target.value })} className={inp}>
-                          <option value="">İlgili…</option>{iOpts.map((o) => <option key={o} value={o}>{o}</option>)}
-                        </select>
+                        <SearchSelect value={r.ilgili || ""} onChange={(v) => updEntry(r.id, { ilgili: v })} options={iOpts} placeholder={alanLabel(r.tur || "")} />
                       ) : <span className="block px-2 text-[12px] text-ink/30">—</span>}
                     </td>
                     <td className="px-1 py-1"><input value={r.aciklama} onChange={(ev) => updEntry(r.id, { aciklama: ev.target.value })} placeholder="Açıklama" className={inp} /></td>
