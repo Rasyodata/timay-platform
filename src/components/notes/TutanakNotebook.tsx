@@ -2,8 +2,11 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Users, MapPin, ClipboardList, Target, Gavel, AlertTriangle, CheckSquare, Square,
   CheckCircle2, Plus, Pencil, Check, ChevronLeft, ChevronRight, Search, X, Trash2,
+  Printer, Mail, Save, FolderKanban, Scale, Briefcase,
 } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
+import { useProjects } from "@/context/ProjectsContext";
+import { useUsers } from "@/context/UsersContext";
 import type { DynamicRecord } from "@/types/modules";
 import type { View } from "@/App";
 
@@ -51,8 +54,12 @@ function EditList({ value, onChange, ph, sep = "\n" }: { value: string; onChange
 
 export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View) => void }) {
   const { getModule, addRecord, updateRecord, deleteRecord } = useModules();
+  const { projects } = useProjects();
+  const { users } = useUsers();
   const mod = getModule(MOD);
   const recs = (mod?.records ?? []) as DynamicRecord[];
+  const avukatlar = (getModule("mod-T-0017")?.records ?? []) as DynamicRecord[];
+  const [saved, setSaved] = useState(false);
   const [selId, setSelId] = useState<string | null>(recs[0] ? String(recs[0].id) : null);
   const [edit, setEdit] = useState(false);
   const [q, setQ] = useState("");
@@ -141,6 +148,37 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
   ];
   const quickAdd = (key: string) => { setEdit(true); SECTIONS.find((s) => s.key === key)?.add(); };
 
+  // Tutanağın düz metin dökümü — yazdır ve mail için
+  const tutanakText = () => {
+    const list = (label: string, arr: string[]) => (arr.length ? `\n${label}:\n${arr.map((x, i) => `  ${i + 1}. ${x}`).join("\n")}` : "");
+    return [
+      `TOPLANTI TUTANAĞI — ${String(sel.tutanak_no || "")}`,
+      sel.toplanti ? `Konu: ${String(sel.toplanti)}` : "",
+      tarihStr ? `Tarih: ${tarihStr}${sel.saat ? ` / ${String(sel.saat)}` : ""}` : "",
+      sel.yer ? `Yer: ${String(sel.yer)}` : "",
+      sel.proje ? `Proje: ${String(sel.proje)}` : "",
+      sel.is_gorev ? `İş / Görev: ${String(sel.is_gorev)}` : "",
+      sel.avukat ? `Sorumlu Avukat: ${String(sel.avukat)}` : "",
+      list("Katılımcılar", katilimcilar),
+      list("Gündem", gundem),
+      list("Görüşülen Konular", gorusulen),
+      list("Kararlar", kararlar),
+      list("Aksiyonlar", aksArr.filter((a) => a.is).map((a) => `${a.is} — ${a.sor}${a.trh ? ` (${dmy(a.trh)})` : ""} [${a.drm}]`)),
+    ].filter(Boolean).join("\n");
+  };
+  const yazdir = () => {
+    const w = window.open("", "_blank", "width=820,height=1000");
+    if (!w) return;
+    w.document.write(`<pre style="font-family:Georgia,'Times New Roman',serif;font-size:13pt;white-space:pre-wrap;line-height:1.6;padding:40px 50px">${tutanakText().replace(/</g, "&lt;")}</pre>`);
+    w.document.close(); w.focus(); w.print();
+  };
+  const mailGonder = () => {
+    const subj = encodeURIComponent(`Toplantı Tutanağı ${String(sel.tutanak_no || "")} — ${String(sel.toplanti || "")}`);
+    const body = encodeURIComponent(tutanakText());
+    window.location.href = `mailto:?subject=${subj}&body=${body}`;
+  };
+  const kaydet = () => { setEdit(false); setSaved(true); window.setTimeout(() => setSaved(false), 2000); };
+
   const inp = "rounded border border-black/15 bg-white/80 px-2 py-0.5 text-ink outline-none focus:border-neon-blue";
   const SectionTitle = ({ icon: Icon, children, c }: { icon: typeof Target; children: ReactNode; c: string }) => (
     <h3 className="mb-2 flex items-center gap-2 text-[22px] font-bold text-ink">
@@ -172,8 +210,11 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tutanak ara…" className="w-48 rounded-lg border border-line bg-panel py-2 pl-9 pr-8 text-sm text-ink outline-none transition focus:w-60 focus:border-neon-blue focus:ring-2 focus:ring-neon-blue/20" />
             {q && <button onClick={() => setQ("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-faint hover:text-ink"><X size={14} /></button>}
           </div>
-          <button onClick={() => setEdit((v) => !v)} className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition ${edit ? "border-good bg-good/10 text-good" : "border-line text-muted hover:bg-elevated hover:text-ink"}`}>
-            {edit ? <><Check size={14} /> Bitir</> : <><Pencil size={14} /> Düzenle</>}
+          {saved && <span className="flex items-center gap-1 rounded-lg border border-good/40 bg-good/10 px-2.5 py-1.5 text-xs font-medium text-good animate-fade-in"><Check size={13} /> Kaydedildi</span>}
+          <button onClick={yazdir} title="Tutanağı yazdır / PDF" className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm text-muted transition hover:bg-elevated hover:text-ink"><Printer size={15} /> Yazdır</button>
+          <button onClick={mailGonder} title="E-posta ile gönder" className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm text-muted transition hover:bg-elevated hover:text-ink"><Mail size={15} /> Mail Gönder</button>
+          <button onClick={() => (edit ? kaydet() : setEdit(true))} className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition ${edit ? "border-good bg-good/10 text-good" : "border-line text-muted hover:bg-elevated hover:text-ink"}`}>
+            {edit ? <><Save size={14} /> Kaydet</> : <><Pencil size={14} /> Düzenle</>}
           </button>
           <button onClick={olustur} className="flex items-center gap-1.5 rounded-lg bg-neon-blue px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-110"><Plus size={16} /> Yeni Toplantı Tutanağı</button>
         </div>
@@ -217,9 +258,24 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
                 <p className="flex items-center gap-2"><MapPin size={17} className="shrink-0 text-ink/70" /><b>Yer</b> :
                   {edit ? <input value={String(sel.yer || "")} onChange={(e) => UP({ yer: e.target.value })} placeholder="Toplantı yeri" className={`${inp} flex-1 text-[17px]`} style={{ fontFamily: HAND }} /> : <span>{String(sel.yer || "—")}</span>}
                 </p>
+                <p className="flex items-center gap-2"><FolderKanban size={17} className="shrink-0 text-ink/70" /><b>Proje</b> :
+                  {edit ? <select value={String(sel.proje || "")} onChange={(e) => UP({ proje: e.target.value })} className={`${inp} flex-1 text-[16px]`} style={{ fontFamily: HAND }}><option value="">— Proje seç —</option>{projects.map((p) => <option key={p.id} value={`${p.code} · ${p.name}`}>{p.code} · {p.name}</option>)}</select> : <span>{String(sel.proje || "—")}</span>}
+                </p>
+                <p className="flex items-center gap-2"><Briefcase size={17} className="shrink-0 text-ink/70" /><b>İş / Görev</b> :
+                  {edit ? <input value={String(sel.is_gorev || "")} onChange={(e) => UP({ is_gorev: e.target.value })} placeholder="İş / görev" className={`${inp} flex-1 text-[16px]`} style={{ fontFamily: HAND }} /> : <span>{String(sel.is_gorev || "—")}</span>}
+                </p>
+                <p className="flex items-center gap-2"><Scale size={17} className="shrink-0 text-ink/70" /><b>Sorumlu Avukat</b> :
+                  {edit ? <select value={String(sel.avukat || "")} onChange={(e) => UP({ avukat: e.target.value })} className={`${inp} flex-1 text-[16px]`} style={{ fontFamily: HAND }}><option value="">— Avukat seç —</option>{avukatlar.map((a) => <option key={String(a.id)} value={String(a.avukat)}>{String(a.avukat)}</option>)}</select> : <span>{String(sel.avukat || "—")}</span>}
+                </p>
                 <div className="flex gap-2"><ClipboardList size={17} className="mt-1 shrink-0 text-ink/70" />
                   <div className="min-w-0 flex-1"><b>Katılımcılar :</b>
-                    {edit ? <div className="mt-1"><EditList value={String(sel.katilimcilar ?? "")} onChange={(v) => UP({ katilimcilar: v })} ph="Katılımcı ekle" /></div>
+                    {edit ? <div className="mt-1">
+                        <EditList value={String(sel.katilimcilar ?? "")} onChange={(v) => UP({ katilimcilar: v })} ph="Katılımcı ekle" />
+                        <select value="" onChange={(e) => { if (e.target.value) UP({ katilimcilar: [...nlRaw(sel.katilimcilar), e.target.value].join("\n") }); }} className={`${inp} mt-1 w-full text-[14px]`} style={{ fontFamily: HAND }}>
+                          <option value="">+ Kullanıcı kayıtlarından ekle…</option>
+                          {users.filter((u) => u.active).map((u) => <option key={u.id} value={u.name}>{u.name} ({u.department})</option>)}
+                        </select>
+                      </div>
                       : <ul className="ml-3 mt-0.5 list-disc space-y-0.5 marker:text-ink/40">{katilimcilar.map((k, i) => <li key={i}>{k}</li>)}</ul>}
                   </div>
                 </div>

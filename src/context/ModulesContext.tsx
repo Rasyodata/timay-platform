@@ -15,7 +15,7 @@ import {
 } from "@/types/modules";
 import { useAudit } from "@/context/AuditContext";
 
-const STORAGE_KEY = "timay.dynamic-modules.v71";
+const STORAGE_KEY = "timay.dynamic-modules.v72";
 
 interface NewModuleInput {
   name: string;
@@ -77,19 +77,14 @@ function genericFields(): DynamicField[] {
 // K018_TPR sistem yöneticisindeki örnek sistem tabloları.
 const SEED_TABLES: [string, string, string][] = [
   ["T-0018", "Sözleşmeler Tablosu", "İnşaat / İK / danışmanlık / tedarik sözleşmeleri"],
-  ["T-0019", "Satıcı / Prim Tablosu", "Satıcı cari hesapları ve prim bakiyeleri"],
   ["T-0020", "Projeler Tablosu", "İnşaat ve gayrimenkul proje kayıtları"],
   ["T-0001", "Kullanıcı Cari Kart", "Kullanıcılar ve cari kartlar (müşteri · satıcı · personel · hak sahibi · danışman · yönetici) · iletişim"],
-  ["T-0027", "Ödeme Sözü Kartı", "Ödeme taahhüdü · tutar · vade · durum"],
-  ["T-0028", "Tahminlenen Bütçe Çıkış Kartı", "Öngörülen harcama · çıkış tipi/türü · tekrar · tahmini tutar"],
-  ["T-0029", "Gider Kartı", "Düzenli gider (kira, maaş, YK, mali müşavir…) · tekrarlı çıkış"],
   ["T-0031", "Yetki Ana Grup Tablosu", "Yetki grubu şablonu · temel rol · varsayılan düzey · kapsam modülleri"],
   ["T-0032", "Kayıt Grupları Tablosu", "Kart türüne göre gruplar (ör. Dava → Hukuk Davaları) · kart tanımlarında seçilir"],
   ["T-0033", "İnşaat Yapı Sınıfı ve Grup Tablosu", "Yapı sınıfı/grubu · sınıf tanımı · 2026 birim maliyet (TL/m²) · yaygın yapı türü örnekleri"],
   ["T-0034", "İnşaat Maliyet Hesaplama Tablosu", "Yapı sınıfı × m² = maliyet (T-0033 birim maliyetinden) · KDV hariç %10 müteahhit kârı dahil"],
   ["T-0035", "Satın Alma Tablosu", "Daire/arsa/dükkan satın alımları · proje · satıcı · tutar"],
   ["T-0037", "Giriş / Çıkış Tablosu", "Daire/arsa giriş-çıkış takibi · giriş tipi (müşteri/yap-sat/kat karşılığı) · proje"],
-  ["T-0038", "Proje Tablosu", "Proje tipi (Yap-Sat/Kat Karşılığı) · künye · il/ilçe · arsa/inşaat/satılabilir m² · daire/dükkan · hedef maliyet"],
   ["T-0039", "Personel Görev Tablosu", "Departman/göreve göre standart görevler (ör. Büro Asistanı) + karta iş ekleme"],
   ["T-0040", "İş Takvimi Tablosu", "Her personelin günlük/haftalık/aylık işleri · durum takibi"],
   ["T-0041", "Belge Yönetimi Tablosu", "Sekreter/asistan günlük kayıt defteri · gelen kişi/telefon/evrak/istek · ofise giriş-çıkış · konum"],
@@ -134,6 +129,85 @@ function workflowFields(): FieldDef[] {
 // Proje kartı sekmelerinde kullanılan özel tablolar.
 function specialTables(): DynamicModule[] {
   return [
+    mkTbl("T-0038", "Proje Tablosu",
+      "Proje ana kaydı (master) — diğer tablolar (masraf, risk, defter, hesap) buna bağlanır · müşteri · sorumlu · bütçe · durum.", "FolderKanban",
+      [
+        { code: "proje_kodu", name: "Proje Kodu", type: "TEXT", required: true, visibility: "EVERYONE" },
+        { code: "proje_adi", name: "Proje Adı", type: "TEXT", required: true, visibility: "EVERYONE" },
+        { code: "musteri", name: "Müşteri / Cari", type: "DROPDOWN", required: false, visibility: "EVERYONE", optionsSource: "users" },
+        { code: "sorumlu", name: "Proje Sorumlusu", type: "DROPDOWN", required: false, visibility: "EVERYONE", optionsSource: "users" },
+        { code: "baslangic", name: "Başlangıç Tarihi", type: "DATE", required: false, visibility: "EVERYONE" },
+        { code: "bitis", name: "Bitiş / Teslim Tarihi", type: "DATE", required: false, visibility: "EVERYONE" },
+        { code: "butce", name: "Proje Bütçesi (₺)", type: "NUMBER", required: false, visibility: "ONLY_MANAGERS" },
+        { code: "durum", name: "Durum", type: "DROPDOWN", required: true, visibility: "EVERYONE", options: ["Planlama", "Devam Ediyor", "Tamamlandı", "Beklemede", "İptal"] },
+        { code: "aciklama", name: "Açıklama", type: "TEXTAREA", required: false, visibility: "EVERYONE" },
+      ],
+      [
+        { id: "prj1", proje_kodu: "PRJ-2026-01", proje_adi: "Timay Web Platformu", musteri: "Timay Teknoloji A.Ş.", sorumlu: "Rasyodata", baslangic: "2026-09-01", bitis: "2026-12-31", butce: 1200000, durum: "Devam Ediyor", aciklama: "Kurumsal iş yönetim platformu geliştirme." },
+        { id: "prj2", proje_kodu: "PRJ-2026-02", proje_adi: "Mobil Uygulama", musteri: "Timay Teknoloji A.Ş.", sorumlu: "Rasyodata", baslangic: "2026-10-15", bitis: "2027-03-31", butce: 750000, durum: "Planlama", aciklama: "iOS/Android mobil uygulama." },
+      ],
+    ),
+    mkTbl("T-0019", "Satıcı / Prim Tablosu",
+      "Satıcı cari hesapları · prim oranı · hakediş · ödenen prim · prim bakiyesi.", "Wallet",
+      [
+        { code: "satici", name: "Satıcı", type: "DROPDOWN", required: true, visibility: "EVERYONE", optionsSource: "users" },
+        { code: "prim_orani", name: "Prim Oranı (%)", type: "NUMBER", required: false, visibility: "EVERYONE" },
+        { code: "hakedis", name: "Hakediş (₺)", type: "NUMBER", required: false, visibility: "ONLY_MANAGERS" },
+        { code: "odenen_prim", name: "Ödenen Prim (₺)", type: "NUMBER", required: false, visibility: "ONLY_MANAGERS" },
+        { code: "bakiye", name: "Prim Bakiyesi (₺)", type: "NUMBER", required: false, visibility: "ONLY_MANAGERS" },
+        { code: "durum", name: "Durum", type: "DROPDOWN", required: false, visibility: "EVERYONE", options: ["Aktif", "Kapandı"] },
+        { code: "aciklama", name: "Açıklama", type: "TEXTAREA", required: false, visibility: "EVERYONE" },
+      ],
+      [
+        { id: "sp1", satici: "Beta Tedarik Ltd.", prim_orani: 3, hakedis: 90000, odenen_prim: 60000, bakiye: 30000, durum: "Aktif", aciklama: "Q4 satış primi." },
+      ],
+    ),
+    mkTbl("T-0027", "Ödeme Sözü Kartı",
+      "Ödeme taahhüdü · cari · tutar · vade · durum (tutuldu/bozuldu) — nakit akış projeksiyonuna beslenir.", "ClipboardList",
+      [
+        { code: "cari", name: "Cari", type: "DROPDOWN", required: true, visibility: "EVERYONE", optionsSource: "users" },
+        { code: "tutar", name: "Söz Verilen Tutar (₺)", type: "NUMBER", required: true, visibility: "ONLY_MANAGERS" },
+        { code: "soz_tarihi", name: "Söz Tarihi", type: "DATE", required: false, visibility: "EVERYONE" },
+        { code: "vade_tarihi", name: "Taahhüt Vade Tarihi", type: "DATE", required: true, visibility: "EVERYONE" },
+        { code: "durum", name: "Durum", type: "DROPDOWN", required: true, visibility: "EVERYONE", options: ["Bekliyor", "Tutuldu", "Bozuldu", "Ertelendi"] },
+        { code: "aciklama", name: "Açıklama", type: "TEXTAREA", required: false, visibility: "EVERYONE" },
+      ],
+      [
+        { id: "os1", cari: "Acme A.Ş.", tutar: 120000, soz_tarihi: "2026-10-10", vade_tarihi: "2026-10-30", durum: "Bekliyor", aciklama: "FTR-2026-0001 tahsilat sözü." },
+      ],
+    ),
+    mkTbl("T-0028", "Tahmini Bütçe Çıkış Kartı",
+      "Öngörülen harcama · çıkış tipi · tutar · tarih · tekrar — nakit akış çıkış tarafını besler.", "FileText",
+      [
+        { code: "cikis_tipi", name: "Çıkış Tipi", type: "DROPDOWN", required: true, visibility: "EVERYONE", options: ["Tedarikçi", "Maaş", "Vergi", "Kira", "Diğer"] },
+        { code: "kategori", name: "Kategori", type: "TEXT", required: false, visibility: "EVERYONE" },
+        { code: "tutar", name: "Tahmini Tutar (₺)", type: "NUMBER", required: true, visibility: "ONLY_MANAGERS" },
+        { code: "tarih", name: "Öngörülen Tarih", type: "DATE", required: true, visibility: "EVERYONE" },
+        { code: "tekrar", name: "Tekrar", type: "DROPDOWN", required: false, visibility: "EVERYONE", options: ["Tek Sefer", "Aylık", "Yıllık"] },
+        { code: "cari", name: "Cari", type: "DROPDOWN", required: false, visibility: "EVERYONE", optionsSource: "users" },
+        { code: "aciklama", name: "Açıklama", type: "TEXTAREA", required: false, visibility: "EVERYONE" },
+      ],
+      [
+        { id: "bc1", cikis_tipi: "Maaş", kategori: "Bordro", tutar: 180000, tarih: "2026-11-05", tekrar: "Aylık", cari: "", aciklama: "Kasım bordro ödemesi." },
+      ],
+    ),
+    mkTbl("T-0029", "Gider Kartı",
+      "Düzenli gider (kira, maaş, mali müşavir, abonelik) · tutar · tekrar periyodu · cari.", "Wallet",
+      [
+        { code: "gider_adi", name: "Gider Adı", type: "TEXT", required: true, visibility: "EVERYONE" },
+        { code: "kategori", name: "Kategori", type: "DROPDOWN", required: false, visibility: "EVERYONE", options: ["Kira", "Maaş", "Mali Müşavir", "Yönetim", "Abonelik", "Diğer"] },
+        { code: "tutar", name: "Tutar (₺)", type: "NUMBER", required: true, visibility: "ONLY_MANAGERS" },
+        { code: "tekrar_periyodu", name: "Tekrar Periyodu", type: "DROPDOWN", required: false, visibility: "EVERYONE", options: ["Aylık", "Yıllık", "Tek Sefer"] },
+        { code: "baslangic", name: "Başlangıç Tarihi", type: "DATE", required: false, visibility: "EVERYONE" },
+        { code: "cari", name: "Cari / Tedarikçi", type: "DROPDOWN", required: false, visibility: "EVERYONE", optionsSource: "users" },
+        { code: "durum", name: "Durum", type: "DROPDOWN", required: false, visibility: "EVERYONE", options: ["Aktif", "Pasif"] },
+        { code: "aciklama", name: "Açıklama", type: "TEXTAREA", required: false, visibility: "EVERYONE" },
+      ],
+      [
+        { id: "gd1", gider_adi: "Ofis Kirası", kategori: "Kira", tutar: 35000, tekrar_periyodu: "Aylık", baslangic: "2026-01-01", cari: "", durum: "Aktif", aciklama: "Merkez ofis aylık kira." },
+        { id: "gd2", gider_adi: "Mali Müşavir", kategori: "Mali Müşavir", tutar: 12000, tekrar_periyodu: "Aylık", baslangic: "2026-01-01", cari: "", durum: "Aktif", aciklama: "Aylık muhasebe hizmeti." },
+      ],
+    ),
     mkTbl("T-0002", "Cari Tür Kodları Tanımlama",
       "Cari türleri (Kullanıcı Tipi) ve muhasebe kod önekleri (cari tür kodu).", "Table2",
       [
