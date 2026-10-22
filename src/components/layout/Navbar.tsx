@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Bell, Check, ChevronDown, LogOut, Menu, Radio, Search, X, Trash2,
+  Bell, Check, ChevronDown, LogOut, Menu, Radio, Search, X, Trash2, MessageSquare,
   CalendarCheck2, ListChecks, Inbox, StickyNote, NotebookPen, Users, Folder,
   FolderKanban, ClipboardList, Building2, Table2, FileText, UserPlus, Gauge, Wallet,
 } from "lucide-react";
@@ -254,6 +254,8 @@ function DocSearch({ onNavigate }: { onNavigate: (v: View) => void }) {
 export default function Navbar({ onMenu, onNavigate, view, activeWs }: NavbarProps) {
   const { live, toggleLive } = useDashboard();
   const { getModule } = useModules();
+  const { currentUser } = useUsers();
+  const unreadMsg = (getModule("mod-T-0087")?.records ?? []).filter((r) => { const m = r as Record<string, unknown>; return m.alici === currentUser.name && !m.okundu; }).length;
 
   const openTasks = (getModule("mod-T-0056")?.records ?? []).filter((r) => String((r as Record<string, unknown>).durum) !== "Tamamlandı").length;
   const pendingAppr = (getModule("mod-T-0045")?.records ?? []).filter((r) => /bekliyor|incelemede/i.test(String((r as Record<string, unknown>).durum ?? ""))).length;
@@ -294,6 +296,11 @@ export default function Navbar({ onMenu, onNavigate, view, activeWs }: NavbarPro
         <button onClick={toggleLive} className={`chip transition ${live ? "border-good/40 bg-good/10 text-good" : "border-line bg-panel text-muted hover:text-ink"}`}>
           <Radio size={14} className={live ? "animate-pulse-dot" : ""} />
           {live ? "Canlı" : "Duraklatıldı"}
+        </button>
+
+        <button onClick={() => onNavigate("mesajlar")} className={`relative grid h-9 w-9 place-items-center rounded-xl border transition ${view === "mesajlar" ? "border-neon-blue/40 bg-neon-blue/10 text-neon-blue" : "border-line text-muted hover:bg-elevated hover:text-ink"}`} aria-label="Mesajlar" title="Mesajlar">
+          <MessageSquare size={17} />
+          {unreadMsg > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-neon-blue px-1 text-[9px] font-bold text-white ring-2 ring-base">{unreadMsg}</span>}
         </button>
 
         <button className="relative grid h-9 w-9 place-items-center rounded-xl border border-line text-muted transition hover:bg-elevated hover:text-ink" aria-label="Bildirimler">

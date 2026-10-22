@@ -15,7 +15,7 @@ import {
 } from "@/types/modules";
 import { useAudit } from "@/context/AuditContext";
 
-const STORAGE_KEY = "timay.dynamic-modules.v74";
+const STORAGE_KEY = "timay.dynamic-modules.v75";
 
 interface NewModuleInput {
   name: string;
@@ -314,6 +314,17 @@ function specialTables(): DynamicModule[] {
         { code: "tutar", name: "Tutar (₺)", type: "NUMBER", required: false, visibility: "EVERYONE" },
         { code: "aciklama", name: "Açıklama", type: "TEXTAREA", required: false, visibility: "EVERYONE" },
         { code: "ref", name: "Kaynak Ref", type: "TEXT", required: false, visibility: "ONLY_MANAGERS" },
+      ],
+      [],
+    ),
+    mkTbl("T-0087", "Mesajlaşma Kayıtları",
+      "Platform içi mesajlaşma logu · tarih-saat · gönderen · alıcı · mesaj · okundu. Yönetim ayarlarında denetim için tutulur.", "MessageSquare",
+      [
+        { code: "tarih", name: "Tarih / Saat", type: "TEXT", required: true, visibility: "EVERYONE" },
+        { code: "gonderen", name: "Gönderen", type: "TEXT", required: true, visibility: "EVERYONE" },
+        { code: "alici", name: "Alıcı", type: "TEXT", required: true, visibility: "EVERYONE" },
+        { code: "mesaj", name: "Mesaj", type: "TEXTAREA", required: true, visibility: "EVERYONE" },
+        { code: "okundu", name: "Okundu", type: "BOOLEAN", required: false, visibility: "EVERYONE" },
       ],
       [],
     ),

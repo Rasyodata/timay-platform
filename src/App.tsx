@@ -9,6 +9,7 @@ import ProjectWizard from "@/components/projects/ProjectWizard";
 import ProjectDetail from "@/components/projects/ProjectDetail";
 import ProjectsBI from "@/components/projects/ProjectsBI";
 import ProjeDefteriPage from "@/components/projects/ProjeDefteriPage";
+import MesajlasmaPanel from "@/components/messaging/MesajlasmaPanel";
 import AuditLog from "@/components/audit/AuditLog";
 import { UsersAdmin, RolesAdmin } from "@/components/admin/UsersRolesAdmin";
 import TableRecordAdd from "@/components/admin/TableRecordAdd";
@@ -77,6 +78,7 @@ export type View =
   | "project-new"
   | "bi"
   | "proje-defteri"
+  | "mesajlar"
   | `project:${string}`
   | "builder"
   | `edit:${string}`
@@ -155,6 +157,7 @@ function DashboardShell() {
 
                 {view === "bi" && <ProjectsBI onOpen={(id) => navigate(`project:${id}`)} />}
                 {view === "proje-defteri" && <ProjeDefteriPage />}
+                {view === "mesajlar" && <MesajlasmaPanel />}
                 {view === "projects" && (
                   <ProjectsList onOpen={(id) => navigate(`project:${id}`)} onNew={() => navigate("project-new")} />
                 )}

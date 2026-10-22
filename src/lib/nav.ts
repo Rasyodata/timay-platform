@@ -32,6 +32,7 @@ import {
   FileText,
   CalendarClock,
   Calculator,
+  MessageSquare,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { View } from "@/App";
@@ -214,6 +215,7 @@ export const CATEGORIES: CategoryDef[] = [
     items: [
       { icon: Table2, label: "Tablo Kayıt Ekle", view: "record-add", match: (v) => v === "record-add" || v.startsWith("mod:") },
       { icon: FileBarChart, label: "Evraklar", view: "evraklar", match: (v) => v === "evraklar" || v === "evrak-new" },
+      { icon: MessageSquare, label: "Mesaj Logu", view: "mod:mod-T-0087" },
       { icon: History, label: "Denetim İzi", view: "audit" },
       { icon: Settings, label: "Genel Ayarlar", view: "overview" },
       { icon: LifeBuoy, label: "Destek", view: "overview" },

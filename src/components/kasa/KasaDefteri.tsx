@@ -71,7 +71,7 @@ function SearchSelect({ value, onChange, options, placeholder }: { value: string
   const openDrop = () => { if (ref.current) setRect(ref.current.getBoundingClientRect()); setQ(""); setOpen(true); };
   const close = () => { setOpen(false); setQ(""); };
   const filtered = q.trim() ? options.filter((o) => lc(o).includes(lc(q))) : options;
-  const inpCls = "w-full rounded border border-black/10 bg-white/70 px-2 py-1 text-[13px] text-ink outline-none focus:border-neon-blue";
+  const inpCls = "w-full rounded border border-black/10 bg-white/60 px-1.5 py-0.5 text-[11px] text-ink outline-none focus:border-neon-blue";
   return (
     <>
       <input
@@ -272,8 +272,10 @@ export default function KasaDefteri() {
   };
   const gonder = () => { window.location.href = `mailto:?subject=${encodeURIComponent(`Kasa Defteri — ${currentUser.name} — ${dmy(curStr)}`)}&body=${encodeURIComponent(defterText())}`; };
 
-  const inp = "w-full rounded border border-black/10 bg-white/70 px-2 py-1 text-[13px] text-ink outline-none focus:border-neon-blue";
-  const th = "px-2 py-1.5 text-left text-[10px] font-semibold uppercase tracking-wide text-ink/50";
+  const inp = "w-full rounded border border-black/10 bg-white/60 px-1.5 py-0.5 text-[11px] text-ink outline-none focus:border-neon-blue";
+  const th = "px-2 py-1 text-left text-[9px] font-semibold uppercase tracking-wide text-ink/45";
+  // Çizgili defter zemini (ajanda sayfası gibi) — satır yüksekliğiyle hizalı yatay çizgiler
+  const ruled = { backgroundImage: "repeating-linear-gradient(transparent, transparent 28px, rgba(30,64,120,0.09) 28px, rgba(30,64,120,0.09) 29px)" };
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-4 p-4 md:p-6">
@@ -311,8 +313,11 @@ export default function KasaDefteri() {
             <button onClick={() => addEntry({})} className="flex items-center gap-1 rounded-md border border-black/10 bg-white/70 px-2.5 py-1 text-[11px] font-semibold text-ink/70 transition hover:text-neon-blue"><Plus size={12} /> Satır Ekle</button>
           </div>
           <div onDragOver={dragAct ? (e) => e.preventDefault() : undefined} onDrop={dragAct ? (e) => { e.preventDefault(); addQuick(dragAct); setDragAct(null); } : undefined}
-            className={`overflow-x-auto transition ${dragAct ? "ring-2 ring-inset ring-neon-blue/40" : ""}`}>
-            <table className="w-full border-collapse text-sm">
+            style={ruled}
+            className={`relative overflow-x-auto transition ${dragAct ? "ring-2 ring-inset ring-neon-blue/40" : ""}`}>
+            {/* defter sol kenar kırmızı marj çizgisi */}
+            <div className="pointer-events-none absolute inset-y-0 left-[84px] z-0 w-px bg-red-400/30" />
+            <table className="relative z-10 w-full border-collapse text-[11px]">
               <thead>
                 <tr className="border-b border-black/10 bg-black/[0.02]">
                   <th className={`${th} w-[92px]`}>Tarih</th><th className={`${th} w-20`}>Yön</th><th className={`${th} w-24`}>Tür</th><th className={`${th} w-36`}>Alan</th>
@@ -321,8 +326,8 @@ export default function KasaDefteri() {
               </thead>
               <tbody>
                 {withBal.map(({ e: r, bakiye }) => { const iOpts = ilgiliOpts(r.tur || ""); return (
-                  <tr key={r.id} className="group border-b border-black/5 align-middle">
-                    <td className="px-1 py-1"><input value={r.tarih || curStr} onChange={(ev) => updEntry(r.id, { tarih: ev.target.value })} type="date" className={`${inp} text-[11px]`} /></td>
+                  <tr key={r.id} className="group border-b border-sky-900/10 align-middle">
+                    <td className="px-1 py-1"><input value={r.tarih || curStr} onChange={(ev) => updEntry(r.id, { tarih: ev.target.value })} type="date" className={`${inp} text-[10px]`} /></td>
                     <td className="px-1 py-1">
                       <select value={r.yon} onChange={(ev) => { const y = ev.target.value as Yon; const h = hedefForTur(r.tur || "", y); updEntry(r.id, { yon: y, ...(h ? { hedefBase: h.base } : {}) }); }} className={`${inp} ${r.yon === "Giren" ? "text-good" : "text-critical"} font-semibold`}>
                         <option value="Giren">Giren</option><option value="Çıkan">Çıkan</option>
@@ -336,20 +341,20 @@ export default function KasaDefteri() {
                     <td className="px-1 py-1">
                       {iOpts.length > 0 ? (
                         <SearchSelect value={r.ilgili || ""} onChange={(v) => updEntry(r.id, { ilgili: v })} options={iOpts} placeholder={alanLabel(r.tur || "")} />
-                      ) : <span className="block px-2 text-[12px] text-ink/30">—</span>}
+                      ) : <span className="block px-2 text-[11px] text-ink/30">—</span>}
                     </td>
                     <td className="px-1 py-1"><input value={r.aciklama} onChange={(ev) => updEntry(r.id, { aciklama: ev.target.value })} placeholder="Açıklama" className={inp} /></td>
                     <td className="px-1 py-1">
                       {r.yon === "Giren"
-                        ? <input value={r.tutar || ""} onChange={(ev) => updEntry(r.id, { tutar: Number(ev.target.value) || 0 })} onBlur={() => propagate(r)} type="number" placeholder="0,00" className={`${inp} text-right nums text-good ${r.hedefMod && !r.propagated ? "border-amber-300" : ""}`} />
-                        : <span className="block px-2 text-right text-[12px] text-ink/25">—</span>}
+                        ? <div className="flex items-center gap-0.5"><input value={r.tutar || ""} onChange={(ev) => updEntry(r.id, { tutar: Number(ev.target.value) || 0 })} onBlur={() => propagate(r)} type="number" placeholder="0,00" className={`${inp} text-right nums text-good ${r.hedefMod && !r.propagated ? "border-amber-300" : ""}`} /><span className="shrink-0 text-[10px] font-semibold text-good/70">₺</span></div>
+                        : <span className="block px-2 text-right text-[11px] text-ink/25">—</span>}
                     </td>
                     <td className="px-1 py-1">
                       {r.yon === "Çıkan"
-                        ? <input value={r.tutar || ""} onChange={(ev) => updEntry(r.id, { tutar: Number(ev.target.value) || 0 })} onBlur={() => propagate(r)} type="number" placeholder="0,00" className={`${inp} text-right nums text-critical ${r.hedefMod && !r.propagated ? "border-amber-300" : ""}`} />
-                        : <span className="block px-2 text-right text-[12px] text-ink/25">—</span>}
+                        ? <div className="flex items-center gap-0.5"><input value={r.tutar || ""} onChange={(ev) => updEntry(r.id, { tutar: Number(ev.target.value) || 0 })} onBlur={() => propagate(r)} type="number" placeholder="0,00" className={`${inp} text-right nums text-critical ${r.hedefMod && !r.propagated ? "border-amber-300" : ""}`} /><span className="shrink-0 text-[10px] font-semibold text-critical/70">₺</span></div>
+                        : <span className="block px-2 text-right text-[11px] text-ink/25">—</span>}
                     </td>
-                    <td className="px-2 py-1 text-right nums text-[13px] font-semibold text-ink">{tl(bakiye)}</td>
+                    <td className="px-2 py-1 text-right nums text-[11px] font-semibold text-ink">{tl(bakiye)}</td>
                     <td className="px-1 py-1"><button onClick={() => delEntry(r.id)} className="grid h-6 w-6 place-items-center rounded text-ink/30 opacity-0 transition hover:text-critical group-hover:opacity-100"><Trash2 size={13} /></button></td>
                   </tr>
                 ); })}
@@ -358,11 +363,11 @@ export default function KasaDefteri() {
                 )}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-black/10 bg-black/[0.03] font-semibold">
-                  <td colSpan={5} className="px-2 py-2 text-right text-[12px] text-ink/60">Dünden Devir {tl(dundenDevir)} · Sayfa Toplamları →</td>
-                  <td className="px-2 py-2 text-right nums text-good">{tl(girenTop)}</td>
-                  <td className="px-2 py-2 text-right nums text-critical">{tl(cikanTop)}</td>
-                  <td className="px-2 py-2 text-right nums text-neon-blue">{tl(yarinaDevir)}</td>
+                <tr className="border-t-2 border-black/10 bg-black/[0.03] text-[11px] font-semibold">
+                  <td colSpan={5} className="px-2 py-1.5 text-right text-ink/60">Dünden Devir {tl(dundenDevir)} · Sayfa Toplamları →</td>
+                  <td className="px-2 py-1.5 text-right nums text-good">{tl(girenTop)}</td>
+                  <td className="px-2 py-1.5 text-right nums text-critical">{tl(cikanTop)}</td>
+                  <td className="px-2 py-1.5 text-right nums text-neon-blue">{tl(yarinaDevir)}</td>
                   <td />
                 </tr>
               </tfoot>
