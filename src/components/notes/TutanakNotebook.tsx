@@ -352,7 +352,13 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
               <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <div>
                   <SectionTitle icon={Users} c="#F9A8D4">Sorumlular</SectionTitle>
-                  {edit ? <EditList value={String(sel.sorumlular ?? "")} onChange={(v) => UP({ sorumlular: v })} ph="Ad: Sorumluluk" />
+                  {edit ? <div>
+                      <EditList value={String(sel.sorumlular ?? "")} onChange={(v) => UP({ sorumlular: v })} ph="Ad: Sorumluluk" />
+                      <select value="" onChange={(e) => { if (e.target.value) UP({ sorumlular: [...nlRaw(sel.sorumlular), e.target.value].join("\n") }); }} className={`${inp} mt-1 w-full text-[14px]`} style={{ fontFamily: HAND }}>
+                        <option value="">+ Kullanıcı kayıtlarından ekle…</option>
+                        {users.filter((u) => u.active).map((u) => <option key={u.id} value={`${u.name}: `}>{u.name} ({u.department})</option>)}
+                      </select>
+                    </div>
                     : <ul className="space-y-1 text-[16px]">{sorumlular.map((s, i) => { const k = s.indexOf(":"); return <li key={i} className="flex gap-1.5"><Users size={14} className="mt-1 shrink-0 text-ink/50" /><span>{k >= 0 ? <><b>{s.slice(0, k)}</b>{s.slice(k)}</> : s}</span></li>; })}</ul>}
                 </div>
                 <div>
