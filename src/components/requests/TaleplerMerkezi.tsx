@@ -77,7 +77,13 @@ export default function TaleplerMerkezi(_props: { onNavigate?: (v: View) => void
   const reset = () => { setEditRec("new"); setFormKey((k) => k + 1); };
   const duzelt = (r: DynamicRecord) => { setEditRec(r); setFormKey((k) => k + 1); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const onayaGonder = (r: DynamicRecord) => {
-    addRecord("mod-T-0045", { konu: String(r.konu), tarih: String(r.tarih || now()), durum: "Bekliyor", aciklama: `İstek: ${String(r.talep_turu)} · ${String(r.konu)}${Number(r.tutar) ? " · " + tl(r.tutar) : ""}` });
+    addRecord("mod-T-0045", {
+      konu: String(r.konu), tarih: String(r.tarih || now()), durum: "Bekliyor",
+      istek_tipi: String(r.talep_turu || ""), talep_eden: String(r.talep_eden || ""),
+      ...(Number(r.tutar) ? { tutar: Number(r.tutar) } : {}),
+      onay_zinciri: String(r.onay_zinciri || ""),
+      aciklama: `İstek ${String(r.talep_no || "")} · ${String(r.talep_turu || "")}${Number(r.tutar) ? " · " + tl(r.tutar) : ""}${r.aciklama ? " · " + String(r.aciklama) : ""}`,
+    });
     updateRecord(MOD, String(r.id), { durum: "İncelemede" });
   };
   const istekMetni = (r: DynamicRecord) => [
