@@ -164,6 +164,9 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
   const [pendingNo, setPendingNo] = useState<string | null>(null);
   // Hızlı Ekle — sürüklenen bölüm
   const [dragSec, setDragSec] = useState<string | null>(null);
+  // Bölümler boş başlar; sadece içeriği olan ya da Hızlı Ekle ile eklenenler gösterilir
+  const [added, setAdded] = useState<Set<string>>(new Set());
+  useEffect(() => { setAdded(new Set()); }, [selId]);
 
   // Yeni oluşturulan tutanağı seç
   useEffect(() => {
@@ -244,7 +247,9 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
     { key: "riskler", label: "Risk", icon: AlertTriangle, c: "#FDE68A", add: () => setL("riskler", [...nlRaw(sel.riskler), "Yeni risk"]) },
     { key: "aksiyonlar", label: "Aksiyon", icon: CheckCircle2, c: "#86EFAC", add: () => setAks([...aksArr, { is: "Yeni iş", sor: "", trh: "", drm: "Bekliyor" }]) },
   ];
-  const quickAdd = (key: string) => { setEdit(true); SECTIONS.find((s) => s.key === key)?.add(); };
+  const quickAdd = (key: string) => { setEdit(true); setAdded((p) => new Set(p).add(key)); SECTIONS.find((s) => s.key === key)?.add(); };
+  // Bir bölüm gösterilsin mi? (içeriği var ya da eklendi)
+  const act = (key: string, arr: { length: number }) => arr.length > 0 || added.has(key);
 
   // Tutanağın düz metin dökümü — yazdır ve mail için
   const tutanakText = () => {
@@ -363,7 +368,26 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
         </div>
       </div>
 
-      <div className="flex items-stretch">
+      <div className="flex items-stretch gap-3">
+        {/* SOL — Hızlı Ekle: tıkla ya da deftere sürükle bırak */}
+        <div className="w-44 shrink-0">
+          <div className="sticky top-4 rounded-xl border-2 border-dashed border-neon-blue/40 bg-neon-blue/5 p-3">
+            <p className="mb-2 flex items-center gap-1.5 text-[15px] font-bold text-ink"><Plus size={16} className="text-neon-blue" /> Hızlı Ekle</p>
+            <p className="mb-2.5 text-[11px] text-ink/50">Tıkla ya da deftere <b className="text-ink/70">sürükle bırak</b> — o başlıkla alan açılır.</p>
+            <div className="flex flex-col gap-1.5">
+              {SECTIONS.map((s) => (
+                <button key={s.key}
+                  draggable onDragStart={() => setDragSec(s.key)} onDragEnd={() => setDragSec(null)}
+                  onClick={() => quickAdd(s.key)}
+                  className={`flex cursor-grab items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-left text-[13px] font-semibold text-ink transition hover:-translate-y-0.5 active:cursor-grabbing ${dragSec === s.key ? "opacity-40" : ""}`}
+                  style={{ background: s.c + "33", borderColor: s.c }}>
+                  <s.icon size={13} className="shrink-0" /> {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* Defter — düzenleme modunda değilken üzerine tıklayınca düzenlenebilir */}
         <div
           onClick={!edit ? () => setEdit(true) : undefined}
@@ -410,23 +434,29 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
                 <p className="flex items-center gap-2"><Scale size={17} className="shrink-0 text-ink/70" /><b>Sorumlu Avukat</b> :
                   {edit ? <select value={String(sel.avukat || "")} onChange={(e) => UP({ avukat: e.target.value })} className={`${inp} flex-1 text-[16px]`} style={{ fontFamily: HAND }}><option value="">— Avukat seç —</option>{avukatlar.map((a) => <option key={String(a.id)} value={String(a.avukat)}>{String(a.avukat)}</option>)}</select> : <span>{String(sel.avukat || "—")}</span>}
                 </p>
+                {act("katilimcilar", katilimcilar) && (
                 <div className="flex gap-2"><ClipboardList size={17} className="mt-1 shrink-0 text-ink/70" />
                   <div className="min-w-0 flex-1"><b>Katılımcılar :</b>
                     {edit ? <div className="mt-1"><EditList value={String(sel.katilimcilar ?? "")} onChange={(v) => UP({ katilimcilar: v })} ph="Katılımcı ekle" /></div>
                       : <ul className="ml-3 mt-0.5 list-disc space-y-0.5 marker:text-ink/40">{katilimcilar.map((k, i) => <li key={i}>{k}</li>)}</ul>}
                   </div>
                 </div>
+                )}
               </div>
 
               {/* Toplantı Amacı — sarı yapışkan */}
+              {act("amac", amac) && (
               <div className="relative float-right ml-4 mt-2 w-56 -rotate-2 rounded-sm bg-[#FEF08A] p-3 shadow-[2px_3px_8px_rgba(0,0,0,0.2)]">
                 <span className="absolute -top-2 left-1/2 h-5 w-10 rounded-sm bg-[#EADFA8]/80" style={{ transform: "translateX(-50%) rotate(-4deg)" }} />
                 <p className="mb-1 text-center text-[19px] font-bold" style={{ textDecoration: "underline", textDecorationColor: "#CA8A04" }}>Toplantı Amacı</p>
                 {edit ? <EditList value={String(sel.amac ?? "")} onChange={(v) => UP({ amac: v })} ph="Amaç ekle" />
                   : <ul className="space-y-0.5 text-[15px]">{amac.map((a, i) => <li key={i} className="flex gap-1"><span>•</span>{a}</li>)}</ul>}
               </div>
+              )}
 
+              {(act("gundem", gundem) || act("onemli", onemli)) && (
               <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
+                {act("gundem", gundem) && (
                 <div>
                   <SectionTitle icon={ClipboardList} c="#60A5FA">Gündem</SectionTitle>
                   {edit ? <EditList value={String(sel.gundem ?? "")} onChange={(v) => UP({ gundem: v })} ph="Gündem maddesi ekle" />
@@ -434,35 +464,48 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
                         <li key={i} className="flex items-center gap-2"><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-ink/30 text-[12px]">{i + 1}</span><span className="flex-1">{g}</span>{i < 3 ? <CheckSquare size={16} className="text-good" /> : <Square size={16} className="text-ink/30" />}</li>
                       ))}</ol>}
                 </div>
+                )}
+                {act("onemli", onemli) && (
                 <div>
                   <SectionTitle icon={AlertTriangle} c="#F9A8D4">Önemli Notlar</SectionTitle>
                   {edit ? <EditList value={String(sel.onemli_notlar ?? "")} onChange={(v) => UP({ onemli_notlar: v })} ph="Not ekle" />
                     : <ul className="space-y-1 text-[16px]">{onemli.map((n, i) => <li key={i} className="flex gap-1.5"><span className="text-ink/50">•</span><span>{n}</span></li>)}</ul>}
                 </div>
+                )}
               </div>
+              )}
 
+              {act("gorusulen", gorusulen) && (
               <div className="mt-5 clear-both">
                 <SectionTitle icon={ClipboardList} c="#86EFAC">Görüşülen Konular</SectionTitle>
                 {edit ? <EditList value={String(sel.gorusulen ?? "")} onChange={(v) => UP({ gorusulen: v })} ph="Görüşülen konu ekle" />
                   : <div className="space-y-1.5 text-[16px]">{gorusulen.map((g, i) => <p key={i}>{g}</p>)}</div>}
               </div>
+              )}
             </div>
 
             {/* ── SAĞ SAYFA ── */}
             <div className="relative p-6 pl-8">
+              {(act("kararlar", kararlar) || act("hedefler", hedefler)) && (
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto]">
+                {act("kararlar", kararlar) && (
                 <div>
                   <SectionTitle icon={Gavel} c="#86EFAC">Kararlar</SectionTitle>
                   {edit ? <EditList value={String(sel.kararlar ?? "")} onChange={(v) => UP({ kararlar: v })} ph="Karar ekle" />
                     : <ol className="space-y-1 text-[17px]">{kararlar.map((k, i) => <li key={i} className="flex gap-2"><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-ink/30 text-[12px]">{i + 1}</span><span>{k}</span></li>)}</ol>}
                 </div>
+                )}
+                {act("hedefler", hedefler) && (
                 <div className="h-fit rounded-lg border-2 border-[#F0A6A6] bg-[#FDECEC]/60 p-3">
                   <p className="mb-1.5 flex items-center gap-1.5 text-[20px] font-bold"><Target size={17} className="text-[#DC2626]" /> Hedef</p>
                   {edit ? <EditList value={String(sel.hedefler ?? "")} onChange={(v) => UP({ hedefler: v })} ph="Hedef ekle" sep=", " />
                     : <ul className="space-y-1 text-[16px]">{hedefler.map((h, i) => <li key={i} className="flex items-center gap-1.5"><CheckSquare size={15} className="text-good" /> {h}</li>)}</ul>}
                 </div>
+                )}
               </div>
+              )}
 
+              {act("surec", surecArr) && (
               <div className="mt-5">
                 <SectionTitle icon={ClipboardList} c="#93C5FD">Süreç Akışı</SectionTitle>
                 {edit ? (
@@ -485,20 +528,28 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
                   ))}</div>
                 )}
               </div>
+              )}
 
+              {(act("sorumlular", sorumlular) || act("riskler", riskler)) && (
               <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
+                {act("sorumlular", sorumlular) && (
                 <div>
                   <SectionTitle icon={Users} c="#F9A8D4">Sorumlular</SectionTitle>
                   {edit ? <EditList value={String(sel.sorumlular ?? "")} onChange={(v) => UP({ sorumlular: v })} ph="Ad: Sorumluluk" />
                     : <ul className="space-y-1 text-[16px]">{sorumlular.map((s, i) => { const k = s.indexOf(":"); return <li key={i} className="flex gap-1.5"><Users size={14} className="mt-1 shrink-0 text-ink/50" /><span>{k >= 0 ? <><b>{s.slice(0, k)}</b>{s.slice(k)}</> : s}</span></li>; })}</ul>}
                 </div>
+                )}
+                {act("riskler", riskler) && (
                 <div>
                   <SectionTitle icon={AlertTriangle} c="#FDE68A">Riskler</SectionTitle>
                   {edit ? <EditList value={String(sel.riskler ?? "")} onChange={(v) => UP({ riskler: v })} ph="Risk ekle" />
                     : <ul className="space-y-1 text-[16px]">{riskler.map((r, i) => <li key={i} className="flex gap-1.5"><span className="text-ink/50">•</span>{r}</li>)}</ul>}
                 </div>
+                )}
               </div>
+              )}
 
+              {act("aksiyonlar", aksArr) && (
               <div className="mt-5">
                 <SectionTitle icon={CheckCircle2} c="#86EFAC">Aksiyonlar</SectionTitle>
                 {edit ? (
@@ -527,25 +578,12 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
                   </div>
                 )}
               </div>
+              )}
 
-              {/* Hızlı Ekle — defterin sağ altı: tıkla ya da deftere sürükle bırak */}
-              <div className="mt-6 rounded-xl border-2 border-dashed border-neon-blue/40 bg-neon-blue/5 p-3">
-                <p className="mb-2 flex items-center gap-1.5 text-[16px] font-bold text-ink" style={{ fontFamily: HAND }}>
-                  <Plus size={16} className="text-neon-blue" /> Hızlı Ekle
-                  <span className="text-[12px] font-normal text-ink/50">— tıkla ya da deftere sürükle bırak</span>
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {SECTIONS.map((s) => (
-                    <button key={s.key}
-                      draggable onDragStart={() => setDragSec(s.key)} onDragEnd={() => setDragSec(null)}
-                      onClick={() => quickAdd(s.key)}
-                      className={`flex cursor-grab items-center gap-1 rounded-full border px-2.5 py-1 text-[13px] font-semibold text-ink transition hover:-translate-y-0.5 active:cursor-grabbing ${dragSec === s.key ? "opacity-40" : ""}`}
-                      style={{ background: s.c + "44", borderColor: s.c, fontFamily: HAND }}>
-                      <s.icon size={13} /> {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* Tüm bölümler boşsa ipucu */}
+              {!act("katilimcilar", katilimcilar) && !act("amac", amac) && !act("gundem", gundem) && !act("onemli", onemli) && !act("gorusulen", gorusulen) && !act("kararlar", kararlar) && !act("hedefler", hedefler) && !act("surec", surecArr) && !act("sorumlular", sorumlular) && !act("riskler", riskler) && !act("aksiyonlar", aksArr) && (
+                <p className="mt-4 text-center text-[16px] text-ink/40" style={{ fontFamily: HAND }}>Boş sayfa — soldaki <b>Hızlı Ekle</b>'den bölüm ekleyin (Karar, Risk, Gündem…) ya da deftere sürükleyin.</p>
+              )}
 
               {edit && (
                 <div className="mt-4 flex justify-end border-t border-dashed border-[#E3DCC6] pt-3">
