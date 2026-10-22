@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import {
   Inbox, Search, X, Check, Clock, Eye, CheckCircle2, XCircle, Plus,
-  Wallet, ShoppingCart, Target, TrendingUp, ListChecks, UserCheck, ArrowRight, FileText,
+  Wallet, ShoppingCart, Target, TrendingUp, ListChecks, UserCheck, FileText, MessageSquare,
 } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
 import { RecordForm } from "@/components/projects/ProjectTableCard";
+import MesajGonderModal from "@/components/messaging/MesajGonderModal";
 import type { DynamicRecord } from "@/types/modules";
 import type { View } from "@/App";
 import type { LucideIcon } from "lucide-react";
@@ -36,6 +37,7 @@ export default function OnaylarPage(_props: { onNavigate?: (v: View) => void }) 
   const [q, setQ] = useState("");
   const [filtre, setFiltre] = useState<"Tümü" | Durum>("Tümü");
   const [modal, setModal] = useState<DynamicRecord | "new" | null>(null);
+  const [msgModal, setMsgModal] = useState<{ baslik: string; icerik: string } | null>(null);
 
   const mod = getModule(MOD);
   const records = (mod?.records ?? []) as DynamicRecord[];
@@ -60,6 +62,18 @@ export default function OnaylarPage(_props: { onNavigate?: (v: View) => void }) 
   }, [records, filtre, q]);
 
   const setDurum = (r: DynamicRecord, durum: Durum) => updateRecord(MOD, String(r.id), { durum });
+
+  // Defter: tarihe göre grupla
+  const byDate = useMemo(() => {
+    const m = new Map<string, DynamicRecord[]>();
+    for (const r of liste) { const d = String(r.tarih ?? ""); if (!m.has(d)) m.set(d, []); m.get(d)!.push(r); }
+    return [...m.entries()];
+  }, [liste]);
+  const onayMetni = (r: DynamicRecord) => [
+    `Konu: ${String(r.konu || "")}`, `Tür: ${String(r.istek_tipi || "")}`, `Durum: ${String(r.durum || "")}`,
+    `Talep Eden: ${String(r.talep_eden || "—")}`, Number(r.tutar) ? `Tutar: ${tl(r.tutar)}` : "", `Tarih: ${dmy(String(r.tarih || ""))}`,
+    r.onay_zinciri ? `Onay Zinciri: ${String(r.onay_zinciri)}` : "", r.aciklama ? `\n${String(r.aciklama)}` : "",
+  ].filter(Boolean).join("\n");
 
   const KPI = ({ label, value, color }: { label: string; value: string; color: string }) => (
     <div className="card p-4">
@@ -107,57 +121,48 @@ export default function OnaylarPage(_props: { onNavigate?: (v: View) => void }) 
         ))}
       </div>
 
-      {/* Onay kartları */}
-      {liste.length === 0 ? (
+      {/* Onay defteri — tarihe göre gruplu */}
+      {byDate.length === 0 ? (
         <div className="card grid place-items-center gap-2 p-16 text-center">
           <Inbox size={34} className="text-faint" />
           <p className="text-sm text-muted">Bu filtrede onay yok.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          {liste.map((r) => {
-            const durum = String(r.durum);
-            const st = DURUM_STYLE[durum] ?? DURUM_STYLE.Bekliyor;
-            const Tip = TIP_ICON(String(r.istek_tipi));
-            const StDot = st.icon;
-            const bekliyor = durum === "Bekliyor" || durum === "İncelemede";
-            return (
-              <div key={r.id} className="card flex flex-col gap-3 p-4 transition hover:shadow-md">
-                <div className="flex items-start gap-3">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: st.bg, color: st.text }}><Tip size={18} /></span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <button onClick={() => setModal(r)} className="truncate text-left text-sm font-bold text-ink hover:underline">{String(r.konu)}</button>
-                      <span className="flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: st.bg, color: st.text }}><StDot size={11} /> {durum}</span>
+        <div className="space-y-5">
+          {byDate.map(([date, rows]) => (
+            <div key={date}>
+              <div className="mb-1.5 flex items-center gap-2"><span className="text-sm font-bold text-ink nums">{dmy(date) || "Tarihsiz"}</span><span className="h-px flex-1 bg-line" /><span className="text-[11px] text-muted">{rows.length} onay</span></div>
+              <div className="space-y-1.5">
+                {rows.map((r) => {
+                  const durum = String(r.durum); const st = DURUM_STYLE[durum] ?? DURUM_STYLE.Bekliyor; const Tip = TIP_ICON(String(r.istek_tipi)); const StDot = st.icon; const bekliyor = durum === "Bekliyor" || durum === "İncelemede";
+                  return (
+                    <div key={r.id} className="group flex items-center gap-3 rounded-lg border border-line bg-panel px-3 py-2.5 transition hover:border-neon-blue/40 hover:shadow-sm">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg" style={{ background: st.bg, color: st.text }}><Tip size={16} /></span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => setModal(r)} className="truncate text-left text-sm font-semibold text-ink hover:underline">{String(r.konu)}</button>
+                          <span className="flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold" style={{ background: st.bg, color: st.text }}><StDot size={10} /> {durum}</span>
+                          {Number(r.tutar) ? <span className="ml-auto shrink-0 font-mono text-[12px] font-bold text-ink nums">{tl(r.tutar)}</span> : null}
+                        </div>
+                        <p className="flex flex-wrap items-center gap-x-2 text-[11px] text-muted">
+                          {r.istek_tipi ? <span>{String(r.istek_tipi)}</span> : null}
+                          <span>· Talep: <span className="text-ink">{String(r.talep_eden || "—")}</span></span>
+                          {r.onay_zinciri ? <span className="truncate">· {String(r.onay_zinciri)}</span> : null}
+                        </p>
+                      </div>
+                      {/* Sağ aksiyonlar: Onayla · İncele · Reddet · Mesaj Gönder */}
+                      <div className="flex shrink-0 items-center gap-0.5">
+                        {bekliyor && <button onClick={() => setDurum(r, "Onaylandı")} title="Onayla" className="grid h-7 w-7 place-items-center rounded-lg text-good transition hover:bg-good/15"><Check size={15} /></button>}
+                        {bekliyor && durum !== "İncelemede" && <button onClick={() => setDurum(r, "İncelemede")} title="İncele" className="grid h-7 w-7 place-items-center rounded-lg text-muted transition hover:bg-elevated hover:text-ink"><Eye size={15} /></button>}
+                        {bekliyor && <button onClick={() => setDurum(r, "Reddedildi")} title="Reddet" className="grid h-7 w-7 place-items-center rounded-lg text-critical transition hover:bg-critical/10"><X size={15} /></button>}
+                        <button onClick={() => setMsgModal({ baslik: `Onay (PDF) — ${String(r.konu || "")}`, icerik: onayMetni(r) })} title="Mesaj olarak gönder" className="grid h-7 w-7 place-items-center rounded-lg text-faint transition hover:bg-neon-blue/10 hover:text-neon-blue"><MessageSquare size={15} /></button>
+                      </div>
                     </div>
-                    <p className="mt-0.5 text-[11px] text-muted">{String(r.istek_tipi)} · {dmy(String(r.tarih))}</p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted">
-                  <span className="flex items-center gap-1.5">
-                    <span className="text-faint">Talep:</span>
-                    <span className="font-medium text-ink">{String(r.talep_eden || "—")}</span>
-                    <ArrowRight size={11} className="text-faint" />
-                    <span className="font-medium text-ink">{String(r.onaylayan || "—")}</span>
-                  </span>
-                  {Number(r.tutar) ? <span className="ml-auto font-mono text-sm font-bold text-ink nums">{tl(r.tutar)}</span> : null}
-                </div>
-
-                {r.aciklama ? <p className="rounded-lg bg-base/60 px-3 py-2 text-[12px] text-ink/70">{String(r.aciklama)}</p> : null}
-
-                {bekliyor && (
-                  <div className="flex items-center gap-2 border-t border-line pt-3">
-                    <button onClick={() => setDurum(r, "Onaylandı")} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-good px-3 py-2 text-xs font-semibold text-white transition hover:brightness-110"><Check size={14} /> Onayla</button>
-                    {durum !== "İncelemede" && (
-                      <button onClick={() => setDurum(r, "İncelemede")} className="flex items-center justify-center gap-1.5 rounded-lg border border-line px-3 py-2 text-xs font-medium text-muted transition hover:text-ink"><Eye size={14} /> İncele</button>
-                    )}
-                    <button onClick={() => setDurum(r, "Reddedildi")} className="flex items-center justify-center gap-1.5 rounded-lg border border-critical/40 px-3 py-2 text-xs font-medium text-critical transition hover:bg-critical/10"><X size={14} /> Reddet</button>
-                  </div>
-                )}
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
 
@@ -175,6 +180,8 @@ export default function OnaylarPage(_props: { onNavigate?: (v: View) => void }) 
           </div>
         </div>
       )}
+
+      {msgModal && <MesajGonderModal baslik={msgModal.baslik} icerik={msgModal.icerik} onClose={() => setMsgModal(null)} />}
     </div>
   );
 }
