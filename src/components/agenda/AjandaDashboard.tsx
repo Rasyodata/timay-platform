@@ -221,7 +221,10 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
             )}
           </div>
         </div>
-        <button onClick={() => window.print()} className="no-print grid h-9 w-9 place-items-center rounded-lg border border-line text-muted transition hover:bg-elevated hover:text-ink" title="Yazdır"><Printer size={16} /></button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setMsgModal({ baslik: `Ajanda (PDF) — ${dmy(curStr)}`, icerik: defterItems.length ? defterItems.map((e) => `${TIP_META[e.tip]?.kisa || e.tip}${e.time ? " " + e.time : ""} · ${e.title}`).join("\n") : "Bu güne düşen kayıt yok." })} title="Bu günün ajandasını (PDF) seçilen kullanıcıya mesaj olarak gönder" className="no-print flex items-center gap-1.5 rounded-lg border border-neon-blue/40 bg-neon-blue/10 px-3 py-2 text-sm font-medium text-neon-blue transition hover:bg-neon-blue/20"><MessageSquare size={15} /> Mesaj Gönder</button>
+          <button onClick={() => window.print()} className="no-print grid h-9 w-9 place-items-center rounded-lg border border-line text-muted transition hover:bg-elevated hover:text-ink" title="Yazdır"><Printer size={16} /></button>
+        </div>
       </div>
 
       {/* Görünüm seçici — piyasa şeridinin üstünde, her görünümde */}

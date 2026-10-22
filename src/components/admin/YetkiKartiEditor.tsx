@@ -9,8 +9,17 @@ import type { DynamicModule } from "@/types/modules";
 const MOD_ID = "mod-T-0030";
 const SIRKETLER = ["Toprak İnşaat", "Proje Ortaklığı", "Tümü (Konsolide)"];
 const YETKI_DUZEYLERI = ["Görür", "Değiştirir", "Tam"];
-// Alan bazlı yetki seçenekleri (seçili olan sarı vurgulanır).
+// Alan bazlı yetki seçenekleri — çoklu seçilebilir (Görür+Düzenler+Ekler birlikte). "Görmez" = erişim yok (diğerlerini temizler).
 const ALAN_YETKILERI = ["Görmez", "Görür", "Düzenler", "Ekler"];
+const GRANTS = ["Görür", "Düzenler", "Ekler"];
+const hasPerm = (cur: string, opt: string) => (cur || "Görmez").split(",").map((s) => s.trim()).includes(opt);
+const togglePerm = (cur: string, opt: string): string => {
+  if (opt === "Görmez") return "Görmez";
+  const set = new Set((cur || "").split(",").map((s) => s.trim()).filter((v) => v && v !== "Görmez"));
+  if (set.has(opt)) set.delete(opt); else set.add(opt);
+  const ordered = GRANTS.filter((g) => set.has(g));
+  return ordered.length ? ordered.join(", ") : "Görmez";
+};
 // Çalışma alanları (sol bar yönetimleri) + Ayarlar — çoklu seçim + modül yetkisi
 const AYARLAR_WS = {
   key: "ayarlar", label: "Ayarlar", icon: Settings,
@@ -81,7 +90,7 @@ export default function YetkiKartiEditor() {
   const [alanlar, setAlanlar] = useState<string[]>([]);
   const [modulYetki, setModulYetki] = useState<Record<string, string>>({});
   const toggleAlan = (key: string) => setAlanlar((p) => (p.includes(key) ? p.filter((x) => x !== key) : [...p, key]));
-  const setModulPerm = (key: string, perm: string) => setModulYetki((p) => ({ ...p, [key]: perm }));
+  const setModulPerm = (key: string, perm: string) => setModulYetki((p) => ({ ...p, [key]: togglePerm(p[key] ?? "Görmez", perm) }));
   // Hazır yetki grubu seç → tüm modüller o izinle dolar, form açılır (sonra içinden değiştirilir)
   const uygulaGrup = (g: { ad: string; perm: string; duzey: string; onlyKeys?: string[] }) => {
     setOpen(true); setAd(g.ad); setDuzey(g.duzey);
@@ -98,7 +107,7 @@ export default function YetkiKartiEditor() {
   // Tablo & alan bazlı yetkiler: key = "modId::fieldCode" → "Görmez/Görür/Düzenler/Ekler"
   const [expanded, setExpanded] = useState<string | null>(null);
   const [fieldPerms, setFieldPerms] = useState<Record<string, string>>({});
-  const setFieldPerm = (key: string, perm: string) => setFieldPerms((p) => ({ ...p, [key]: perm }));
+  const setFieldPerm = (key: string, perm: string) => setFieldPerms((p) => ({ ...p, [key]: togglePerm(p[key] ?? "Görmez", perm) }));
   // Genel: bir tablonun tüm alanlarını seçilen yetkiye ayarla.
   const setAllFieldsFor = (m: DynamicModule, perm: string) =>
     setFieldPerms((p) => {
@@ -230,7 +239,7 @@ export default function YetkiKartiEditor() {
             </div>
             {alanlar.length > 0 && (
               <div className="mt-3 space-y-2">
-                <p className="text-[11px] text-faint">Seçilen alanların modüllerine yetki verin: <b className="text-muted">Görmez / Görür / Düzenler / Ekler</b></p>
+                <p className="text-[11px] text-faint">Seçilen alanların modüllerine yetki verin · <b className="text-muted">çoklu seçim</b>: <b className="text-muted">Görür + Düzenler + Ekler</b> birlikte seçilebilir; <b className="text-muted">Görmez</b> = erişim yok.</p>
                 {ALL_ALANLAR.filter((w) => alanlar.includes(w.key)).map((w) => (
                   <div key={w.key} className="rounded-lg border border-line bg-white/[0.02] p-2.5">
                     <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-ink"><w.icon size={13} className="text-neon-blue" /> {w.label}</p>
@@ -239,8 +248,8 @@ export default function YetkiKartiEditor() {
                         <div key={String(t.view)} className="flex flex-wrap items-center gap-2">
                           <span className="flex w-44 shrink-0 items-center gap-1.5 truncate text-xs text-ink"><t.icon size={12} className="text-muted" /> {t.label}</span>
                           <div className="flex flex-wrap gap-1">
-                            {ALAN_YETKILERI.map((opt) => { const sel = cur === opt; return (
-                              <button key={opt} type="button" onClick={() => setModulPerm(key, opt)} className={`rounded-md border px-2 py-0.5 text-[11px] transition ${sel ? "border-neon-blue/60 bg-neon-blue/20 font-semibold text-neon-blue" : "border-line text-muted hover:text-ink"}`}>{opt}</button>
+                            {ALAN_YETKILERI.map((opt) => { const sel = hasPerm(cur, opt); return (
+                              <button key={opt} type="button" onClick={() => setModulPerm(key, opt)} className={`rounded-md border px-2 py-0.5 text-[11px] transition ${sel ? "border-neon-blue/60 bg-neon-blue/20 font-semibold text-neon-blue" : "border-line text-muted hover:text-ink"}`}>{sel && opt !== "Görmez" ? "✓ " : ""}{opt}</button>
                             ); })}
                           </div>
                         </div>
@@ -330,7 +339,7 @@ export default function YetkiKartiEditor() {
                               <span className="w-40 shrink-0 truncate text-xs text-ink">{f.name}</span>
                               <div className="flex flex-wrap gap-1">
                                 {ALAN_YETKILERI.map((opt) => {
-                                  const on = cur === opt;
+                                  const on = hasPerm(cur, opt);
                                   return (
                                     <button key={opt} type="button" onClick={() => setFieldPerm(key, opt)}
                                       className={`rounded-md border px-2 py-0.5 text-[11px] transition ${on ? "border-warning/60 bg-warning/20 font-semibold text-warning" : "border-line text-muted hover:text-ink"}`}>

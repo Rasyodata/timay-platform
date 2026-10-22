@@ -12,6 +12,7 @@ import type { DynamicRecord } from "@/types/modules";
 import type { View } from "@/App";
 import { openDocReport } from "@/lib/tableReport";
 import { useDefterHareketi } from "@/hooks/useDefterHareketi";
+import MesajGonderModal from "@/components/messaging/MesajGonderModal";
 
 const MOD = "mod-T-0063";
 const HAND = "'Patrick Hand', 'Comic Sans MS', ui-rounded, cursive";
@@ -131,7 +132,7 @@ function EditList({ value, onChange, ph, sep = "\n" }: { value: string; onChange
 export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View) => void }) {
   const { getModule, addRecord, updateRecord, deleteRecord } = useModules();
   const { projects } = useProjects();
-  const { users, currentUser } = useUsers();
+  const { users } = useUsers();
   const logHareket = useDefterHareketi();
   const mod = getModule(MOD);
   const recs = (mod?.records ?? []) as DynamicRecord[];
@@ -325,13 +326,7 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
     const body = encodeURIComponent(tutanakText());
     window.location.href = `mailto:?subject=${subj}&body=${body}`;
   };
-  const yoneticiyeGonder = () => {
-    const yon = users.filter((u) => (u.role === "owner" || u.role === "manager") && u.name !== currentUser.name && u.active);
-    if (yon.length === 0) { setSaved(true); window.setTimeout(() => setSaved(false), 2000); return; }
-    const d2 = new Date(); const ts = `${d2.getFullYear()}-${String(d2.getMonth() + 1).padStart(2, "0")}-${String(d2.getDate()).padStart(2, "0")} ${String(d2.getHours()).padStart(2, "0")}:${String(d2.getMinutes()).padStart(2, "0")}`;
-    yon.forEach((u) => addRecord("mod-T-0087", { tarih: ts, gonderen: currentUser.name, alici: u.name, mesaj: `📄 TOPLANTI TUTANAĞI (PDF) — ${String(sel.tutanak_no || "")}\n\n${tutanakText()}`, okundu: false }));
-    setSaved(true); window.setTimeout(() => setSaved(false), 2000);
-  };
+  const [msgOpen, setMsgOpen] = useState(false);
   const kaydet = () => {
     // Defterler arası bağlantı: toplantıdaki proje/avukat/katılımcılar ilgili defterlerine düşsün
     const baslik = `Toplantı: ${String(sel.toplanti || sel.tutanak_no || "")}`;
@@ -378,7 +373,7 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
           {saved && <span className="flex items-center gap-1 rounded-lg border border-good/40 bg-good/10 px-2.5 py-1.5 text-xs font-medium text-good animate-fade-in"><Check size={13} /> Kaydedildi</span>}
           <button onClick={yazdir} title="Tutanağı yazdır / PDF" className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm text-muted transition hover:bg-elevated hover:text-ink"><Printer size={15} /> Yazdır</button>
           <button onClick={mailGonder} title="E-posta ile gönder" className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm text-muted transition hover:bg-elevated hover:text-ink"><Mail size={15} /> Mail Gönder</button>
-          <button onClick={yoneticiyeGonder} title="Tutanağı yöneticiye platform mesajı olarak gönder" className="flex items-center gap-1.5 rounded-lg border border-neon-blue/40 bg-neon-blue/10 px-3 py-2 text-sm font-medium text-neon-blue transition hover:bg-neon-blue/20"><MessageSquare size={15} /> Yöneticiye Gönder</button>
+          <button onClick={() => setMsgOpen(true)} title="Tutanağı (PDF) seçilen kullanıcıya mesaj olarak gönder" className="flex items-center gap-1.5 rounded-lg border border-neon-blue/40 bg-neon-blue/10 px-3 py-2 text-sm font-medium text-neon-blue transition hover:bg-neon-blue/20"><MessageSquare size={15} /> Mesaj Gönder</button>
           <button onClick={() => (edit ? kaydet() : setEdit(true))} className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition ${edit ? "border-good bg-good/10 text-good" : "border-line text-muted hover:bg-elevated hover:text-ink"}`}>
             {edit ? <><Save size={14} /> Kaydet</> : <><Pencil size={14} /> Düzenle</>}
           </button>
@@ -650,6 +645,7 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
         </div>
 
       </div>
+      {msgOpen && <MesajGonderModal baslik={`Toplantı Tutanağı (PDF) — ${String(sel.tutanak_no || "")}`} icerik={tutanakText()} onClose={() => setMsgOpen(false)} />}
     </div>
     </MentionCtx.Provider>
   );
