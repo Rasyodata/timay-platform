@@ -44,17 +44,13 @@ function AddUserForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [adresSecim, setAdresSecim] = useState("");
   const { addRecord, modules } = useModules();
-  // İletişim/adres seçenekleri Adres Kartı (T-0003) kayıtlarından gelir.
   const adrRecs = (modules.find((m) => m.id === "mod-T-0003")?.records ?? []) as Array<Record<string, unknown>>;
-  const epostaOpts = [...new Set(adrRecs.map((r) => String(r.eposta ?? "").trim()).filter(Boolean))].sort(trSort);
-  const telOpts = [...new Set(adrRecs.flatMap((r) => [r.telefon1, r.telefon2, r.telefon3]).map((t) => String(t ?? "").trim()).filter(Boolean))].sort(trSort);
-  const adresOpts = adrRecs.map((r) => {
-    const sm = [r.sokak, r.mahalle].filter(Boolean).join(", ");
-    const adr = [sm, r.ilce, r.il].filter(Boolean).join(" - ");
-    return { kod: String(r.adres_kodu ?? ""), label: `${r.adres_kodu} · ${r.adres_tipi} · ${adr}` };
-  }).filter((o) => o.kod).sort((a, b) => trSort(a.label, b.label));
+  // Yeni kullanıcı için adres/iletişim — "Adres Ekle" ile girilir, kaydederken T-0003'e işlenir
+  const [adresOpen, setAdresOpen] = useState(false);
+  const [adresTipi, setAdresTipi] = useState<string>("İş");
+  const [sokak, setSokak] = useState(""); const [mahalle, setMahalle] = useState("");
+  const [ilce, setIlce] = useState(""); const [il, setIl] = useState("");
   const userTypeOptions = useUserTypeOptions();
   const departmanOptions = useDepartmentOptions();
   const [department, setDepartment] = useState<string>("");
@@ -79,11 +75,20 @@ function AddUserForm() {
     if (!name.trim()) return;
     addUser({
       name: name.trim(), email: email.trim() || "—", phone: phone.trim(), department, userType,
-      vergiDairesi: vergiDairesi.trim(), vergiNo: vergiNo.trim(), tcNo: tcNo.trim(), adresSecim,
+      vergiDairesi: vergiDairesi.trim(), vergiNo: vergiNo.trim(), tcNo: tcNo.trim(), adresSecim: "",
       baro: userType === "Avukat" ? baro.trim() : "", sicilNo: userType === "Avukat" ? sicilNo.trim() : "",
       role, active: true,
     });
-    setName(""); setEmail(""); setPhone(""); setAdresSecim(""); setVergiDairesi(""); setVergiNo(""); setTcNo(""); setBaro(""); setSicilNo("");
+    // İletişim/adres girildiyse yeni kullanıcı için Adres Kartı (T-0003) oluştur
+    if (email.trim() || phone.trim() || sokak.trim() || mahalle.trim() || ilce.trim() || il.trim()) {
+      const nextAdrKod = `ADR-${String(adrRecs.reduce((mx, r) => Math.max(mx, Number(String(r.adres_kodu ?? "").match(/(\d+)/)?.[1] ?? 0)), 0) + 1).padStart(4, "0")}`;
+      addRecord("mod-T-0003", {
+        adres_kodu: nextAdrKod, kullanici_kodu: nextKod, kullanici_adi: name.trim(), adres_tipi: adresTipi,
+        eposta: email.trim(), telefon1: phone.trim(), sokak: sokak.trim(), mahalle: mahalle.trim(), ilce: ilce.trim(), il: il.trim(),
+      });
+    }
+    setName(""); setEmail(""); setPhone(""); setVergiDairesi(""); setVergiNo(""); setTcNo(""); setBaro(""); setSicilNo("");
+    setSokak(""); setMahalle(""); setIlce(""); setIl(""); setAdresTipi("İş"); setAdresOpen(false);
   };
 
   return (
@@ -117,21 +122,6 @@ function AddUserForm() {
             </div>
           )}
         </label>
-        <label className="block"><span className="mb-1 block text-xs text-muted">E-posta <span className="text-faint">(T-0003'ten)</span></span>
-          <select className={`${input} w-full`} value={email} onChange={(e) => setEmail(e.target.value)}>
-            <option value="">Seçin…</option>
-            {epostaOpts.map((o) => <option key={o} value={o}>{o}</option>)}
-          </select></label>
-        <label className="block"><span className="mb-1 block text-xs text-muted">İletişim (Telefon) <span className="text-faint">(T-0003'ten)</span></span>
-          <select className={`${input} w-full`} value={phone} onChange={(e) => setPhone(e.target.value)}>
-            <option value="">Seçin…</option>
-            {telOpts.map((o) => <option key={o} value={o}>{o}</option>)}
-          </select></label>
-        <label className="block"><span className="mb-1 block text-xs text-muted">Adres <span className="text-faint">(T-0003'ten)</span></span>
-          <select className={`${input} w-full`} value={adresSecim} onChange={(e) => setAdresSecim(e.target.value)}>
-            <option value="">Seçin…</option>
-            {adresOpts.map((o) => <option key={o.kod} value={o.kod}>{o.label}</option>)}
-          </select></label>
         <label className="block"><span className="mb-1 block text-xs text-muted">Global Rol</span>
           <select className={`${input} w-full`} value={role} onChange={(e) => setRole(e.target.value as RoleKey)}>
             {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
@@ -152,10 +142,45 @@ function AddUserForm() {
         )}
       </div>
 
+      {/* İletişim & Adres — "Adres Ekle" ile açılır; tüm adresler listelenmez, bu kullanıcıya özel yeni kayıt girilir */}
+      <div className="mt-3">
+        {!adresOpen ? (
+          <button type="button" onClick={() => setAdresOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-line px-3 py-2 text-sm text-muted transition hover:border-neon-blue/40 hover:text-ink">
+            <Plus size={14} /> Adres Ekle <span className="text-faint">(e-posta, telefon, adres · T-0003)</span>
+          </button>
+        ) : (
+          <div className="rounded-xl border border-line bg-base/40 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted">İletişim & Adres <span className="font-normal normal-case text-faint">(T-0003)</span></span>
+              <button type="button" onClick={() => setAdresOpen(false)} className="text-[11px] text-muted hover:text-ink">✕ Kapat</button>
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <label className="block"><span className="mb-1 block text-xs text-muted">E-posta</span>
+                <input type="email" className={`${input} w-full`} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ornek@firma.com" /></label>
+              <label className="block"><span className="mb-1 block text-xs text-muted">Telefon</span>
+                <input className={`${input} w-full`} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="05xx xxx xx xx" /></label>
+              <label className="block"><span className="mb-1 block text-xs text-muted">Adres Tipi</span>
+                <select className={`${input} w-full`} value={adresTipi} onChange={(e) => setAdresTipi(e.target.value)}>
+                  {ADRES_TIPLERI.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select></label>
+              <label className="block sm:col-span-2"><span className="mb-1 block text-xs text-muted">Sokak / Cadde</span>
+                <input className={`${input} w-full`} value={sokak} onChange={(e) => setSokak(e.target.value)} placeholder="Sokak / Cadde / No" /></label>
+              <label className="block"><span className="mb-1 block text-xs text-muted">Mahalle</span>
+                <input className={`${input} w-full`} value={mahalle} onChange={(e) => setMahalle(e.target.value)} placeholder="Mahalle" /></label>
+              <label className="block"><span className="mb-1 block text-xs text-muted">İlçe</span>
+                <input className={`${input} w-full`} value={ilce} onChange={(e) => setIlce(e.target.value)} placeholder="İlçe" /></label>
+              <label className="block"><span className="mb-1 block text-xs text-muted">İl</span>
+                <input className={`${input} w-full`} value={il} onChange={(e) => setIl(e.target.value)} placeholder="İl" /></label>
+            </div>
+            <p className="mt-2 text-[11px] text-faint">Kaydederken bu bilgiler yeni kullanıcının <b>Adres Kartı (T-0003)</b> kaydı olarak oluşturulur.</p>
+          </div>
+        )}
+      </div>
+
       <button onClick={add} className="mt-4 flex items-center justify-center gap-1.5 rounded-lg bg-neon-blue px-4 py-2 text-sm font-semibold text-white transition hover:bg-neon-blue/90">
         <UserPlus size={15} /> Kullanıcı Ekle
       </button>
-      <p className="mt-2 text-[11px] text-faint">Kullanıcı kodu (K-00NN) otomatik atanır. Adresler aşağıdaki <b>Adres Kartı (T-0003)</b> bölümünden eklenir.</p>
+      <p className="mt-2 text-[11px] text-faint">Kullanıcı kodu (K-00NN) otomatik atanır. Birden fazla adres için kullanıcı eklendikten sonra listedeki <b>Adres Ekle</b>'yi kullanın.</p>
       <p className="mt-3 text-[11px] text-faint">Rol seçimi kullanıcının sistem geneli yetkisini belirler; detay yetkiler "Yetki ve Roller"den düzenlenir.</p>
     </section>
   );
