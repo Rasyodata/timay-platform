@@ -238,7 +238,7 @@ export function categoryForView(view: View, current: CatKey): CatKey {
   // Evraklar hem Proje Yönetimi hem Ayarlar barında var — bulunulan kategoriyi koru.
   if (view === "evraklar" || view === "evrak-new") return current;
   if (
-    view === "audit" || view === "tables" ||
+    view === "audit" || view === "tables" || view === "db-schema" ||
     view === "record-add" || view === "builder" || view.startsWith("edit:") || view.startsWith("mod:")
   ) return "ayarlar";
   return current;

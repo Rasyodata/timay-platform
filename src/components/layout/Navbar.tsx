@@ -255,7 +255,15 @@ export default function Navbar({ onMenu, onNavigate, view, activeWs }: NavbarPro
   const { live, toggleLive } = useDashboard();
   const { getModule } = useModules();
   const { currentUser } = useUsers();
-  const unreadMsg = (getModule("mod-T-0087")?.records ?? []).filter((r) => { const m = r as Record<string, unknown>; return m.alici === currentUser.name && !m.okundu; }).length;
+  const unreadMsgList = (getModule("mod-T-0087")?.records ?? []).filter((r) => { const m = r as Record<string, unknown>; return m.alici === currentUser.name && !m.okundu; }).sort((a, b) => String((b as Record<string, unknown>).tarih).localeCompare(String((a as Record<string, unknown>).tarih)));
+  const unreadMsg = unreadMsgList.length;
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => { if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, []);
 
   const openTasks = (getModule("mod-T-0056")?.records ?? []).filter((r) => String((r as Record<string, unknown>).durum) !== "Tamamlandı").length;
   const pendingAppr = (getModule("mod-T-0045")?.records ?? []).filter((r) => /bekliyor|incelemede/i.test(String((r as Record<string, unknown>).durum ?? ""))).length;
@@ -303,10 +311,34 @@ export default function Navbar({ onMenu, onNavigate, view, activeWs }: NavbarPro
           {unreadMsg > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-neon-blue px-1 text-[9px] font-bold text-white ring-2 ring-base">{unreadMsg}</span>}
         </button>
 
-        <button className="relative grid h-9 w-9 place-items-center rounded-xl border border-line text-muted transition hover:bg-elevated hover:text-ink" aria-label="Bildirimler">
-          <Bell size={17} />
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-neon-rose ring-2 ring-base" />
-        </button>
+        <div className="relative" ref={notifRef}>
+          <button onClick={() => setNotifOpen((o) => !o)} className="relative grid h-9 w-9 place-items-center rounded-xl border border-line text-muted transition hover:bg-elevated hover:text-ink" aria-label="Bildirimler">
+            <Bell size={17} />
+            {unreadMsg > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-neon-rose px-1 text-[9px] font-bold text-white ring-2 ring-base">{unreadMsg}</span>}
+          </button>
+          {notifOpen && (
+            <div className="absolute right-0 top-full z-50 mt-1 w-80 overflow-hidden rounded-xl border border-line bg-panel shadow-card animate-fade-in">
+              <div className="flex items-center justify-between border-b border-line px-3 py-2">
+                <span className="text-sm font-semibold text-ink">Bildirimler</span>
+                {unreadMsg > 0 && <span className="rounded-full bg-neon-rose/15 px-2 py-0.5 text-[10px] font-semibold text-neon-rose">{unreadMsg} okunmamış mesaj</span>}
+              </div>
+              <div className="max-h-80 overflow-y-auto">
+                {unreadMsgList.length === 0 ? (
+                  <p className="px-3 py-6 text-center text-xs text-faint">Yeni bildirim yok.</p>
+                ) : unreadMsgList.slice(0, 10).map((r) => { const m = r as Record<string, unknown>; return (
+                  <button key={String(m.id)} onClick={() => { setNotifOpen(false); onNavigate("mesajlar"); }} className="flex w-full items-start gap-2 border-b border-line/60 px-3 py-2 text-left transition hover:bg-elevated">
+                    <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-neon-blue/10 text-[10px] font-bold text-neon-blue">{String(m.gonderen || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0] || "").join("").toLocaleUpperCase("tr")}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center justify-between gap-1"><span className="truncate text-[12px] font-semibold text-ink">{String(m.gonderen)}</span><span className="shrink-0 text-[9px] text-faint">{String(m.tarih).slice(11, 16)}</span></span>
+                      <span className="block truncate text-[11px] text-muted">{String(m.mesaj)}</span>
+                    </span>
+                  </button>
+                ); })}
+              </div>
+              <button onClick={() => { setNotifOpen(false); onNavigate("mesajlar"); }} className="w-full border-t border-line py-2 text-center text-xs font-medium text-neon-blue transition hover:bg-elevated">Tüm mesajları gör →</button>
+            </div>
+          )}
+        </div>
 
         <ProfileMenu />
       </div>

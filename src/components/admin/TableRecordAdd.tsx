@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Table2, Plus, Search, ChevronDown, X } from "lucide-react";
+import { Table2, Plus, Search, ChevronDown, X, Database } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
 import ProjectTableCard from "@/components/projects/ProjectTableCard";
 import { UsersAdminBody } from "@/components/admin/UsersRolesAdmin";
@@ -45,6 +45,7 @@ export default function TableRecordAdd({ onNavigate }: { onNavigate: (v: View) =
             <Table2 size={20} className="text-neon-blue" /> Tablo Kayıt Ekle
           </h2>
           <p className="mt-1 text-sm text-muted">Bir tablo arayıp seçin; seçilen tabloya göre kayıt ekleyin veya düzenleyin.</p>
+          <button onClick={() => onNavigate("db-schema")} className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-neon-blue/40 bg-neon-blue/10 px-3 py-1.5 text-sm font-medium text-neon-blue transition hover:bg-neon-blue/20"><Database size={15} /> Veritabanı Şeması (tablolar · ilişkiler)</button>
         </div>
         <div className="flex items-end gap-2">
           {/* Aranabilir tablo seçici */}

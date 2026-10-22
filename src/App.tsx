@@ -13,6 +13,7 @@ import MesajlasmaPanel from "@/components/messaging/MesajlasmaPanel";
 import AuditLog from "@/components/audit/AuditLog";
 import { UsersAdmin, RolesAdmin } from "@/components/admin/UsersRolesAdmin";
 import TableRecordAdd from "@/components/admin/TableRecordAdd";
+import VeritabaniSemasi from "@/components/admin/VeritabaniSemasi";
 import EvrakKayitAdd from "@/components/admin/EvrakKayitAdd";
 import FinansMerkezi from "@/components/hub/FinansMerkezi";
 import FinansalRaporlar from "@/components/hub/FinansalRaporlar";
@@ -87,6 +88,7 @@ export type View =
   | "users"
   | "roles"
   | "record-add"
+  | "db-schema"
   | "evraklar"
   | "evrak-new"
   | "tables";
@@ -184,6 +186,7 @@ function DashboardShell() {
                 {view === "users" && <UsersAdmin />}
                 {view === "roles" && <RolesAdmin />}
                 {view === "record-add" && <TableRecordAdd onNavigate={navigate} />}
+                {view === "db-schema" && <VeritabaniSemasi />}
                 {view === "evraklar" && <EvrakKayitAdd onNavigate={navigate} />}
                 {view === "evrak-new" && <ModuleBuilder kind="evrak" onDone={() => navigate("evraklar")} />}
                 {view === "tables" && (
