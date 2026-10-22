@@ -49,7 +49,7 @@ export const WORKSPACES: Workspace[] = [
       { icon: BookOpen, label: "Ajanda", view: "planlayici", kod: "T-0078" },
       { icon: ListChecks, label: "Görevler", view: "gorev-yonetimi", kod: "T-0056" },
       { icon: Inbox, label: "Onaylar", view: "onaylar", kod: "T-0045", match: (v) => v === "onaylar" || v === "mod:mod-T-0045" },
-      { icon: ClipboardList, label: "Talepler", view: "talepler", kod: "T-0076" },
+      { icon: ClipboardList, label: "İstekler", view: "talepler", kod: "T-0076" },
       { icon: StickyNote, label: "Notlar", view: "notlar", kod: "T-0068" },
       { icon: NotebookPen, label: "Toplantı Defteri", view: "tutanak", kod: "T-0063" },
       { icon: Wallet, label: "Kasa Defteri", view: "kasa-defteri", kod: "KASA" },

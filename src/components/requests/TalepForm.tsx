@@ -42,14 +42,14 @@ const ONCELIK = ["Düşük", "Normal", "Yüksek", "Acil"];
 const DONEMLER = ["2026-Q1", "2026-Q2", "2026-Q3", "2026-Q4"];
 const today = () => new Date().toISOString().slice(0, 10);
 
-export default function TalepForm({ initial, onClose }: { initial: DynamicRecord | "new"; onClose: () => void }) {
+export default function TalepForm({ initial, onClose, initialTur }: { initial: DynamicRecord | "new"; onClose: () => void; initialTur?: string }) {
   const { getModule, addRecord, updateRecord } = useModules();
   const { users } = useUsers();
   const rec = initial === "new" ? null : initial;
   const cariList = ((getModule("mod-T-0077")?.records ?? []) as DynamicRecord[]).map((r) => String(r.ad)).filter(Boolean);
 
-  const [tur, setTur] = useState<string>(rec ? String(rec.talep_turu || "") : "");
-  const [konu, setKonu] = useState(String(rec?.konu ?? ""));
+  const [tur, setTur] = useState<string>(rec ? String(rec.talep_turu || "") : (initialTur ?? ""));
+  const [konu, setKonu] = useState(String(rec?.konu ?? initialTur ?? ""));
   const [talepEden, setTalepEden] = useState(String(rec?.talep_eden ?? ""));
   const [departman, setDepartman] = useState(String(rec?.departman ?? ""));
   const [oncelik, setOncelik] = useState(String(rec?.oncelik ?? "Normal"));

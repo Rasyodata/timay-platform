@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import {
-  Inbox, Search, X, Check, Eye, Plus, Clock, CheckCircle2, XCircle, Flag, ArrowRight,
-  Monitor, Package, ShoppingCart, CalendarDays, Wallet, GraduationCap, Wrench, Users, FileText, Zap,
-  UserPlus, ListChecks, Gauge, LogOut, LayoutGrid, List,
+  Inbox, Search, X, Check, Eye, Plus, Clock, CheckCircle2, XCircle, Flag,
+  Monitor, Package, ShoppingCart, CalendarDays, Wallet, GraduationCap, Wrench, Users, FileText,
+  UserPlus, ListChecks, Gauge, LogOut, MessageSquare, Pencil, Send,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
 import TalepForm from "@/components/requests/TalepForm";
+import MesajGonderModal from "@/components/messaging/MesajGonderModal";
 import type { DynamicRecord } from "@/types/modules";
 import type { View } from "@/App";
 
@@ -41,211 +42,132 @@ const TUR_ICON = (t: string): LucideIcon => {
 };
 const dmy = (iso: string) => (iso ? String(iso).split("-").reverse().join(".") : "");
 const tl = (n: unknown) => (Number(n) ? Number(n).toLocaleString("tr-TR") + " ₺" : "");
+const now = () => new Date().toISOString().slice(0, 10);
 
 export default function TaleplerMerkezi(_props: { onNavigate?: (v: View) => void }) {
-  const { getModule, updateRecord } = useModules();
+  const { getModule, updateRecord, addRecord } = useModules();
   const [q, setQ] = useState("");
   const [filtre, setFiltre] = useState<"Tümü" | Durum>("Tümü");
-  const [tur, setTur] = useState("Tümü");
-  const [modal, setModal] = useState<DynamicRecord | "new" | null>(null);
-  const [view, setView] = useState<"liste" | "pano">("liste");
-  const [dragId, setDragId] = useState<string | null>(null);
-  const [over, setOver] = useState<string | null>(null);
+  const [editRec, setEditRec] = useState<DynamicRecord | "new">("new");
+  const [formKey, setFormKey] = useState(0);
+  const [msgModal, setMsgModal] = useState<{ baslik: string; icerik: string } | null>(null);
 
-  const mod = getModule(MOD);
-  const records = (mod?.records ?? []) as DynamicRecord[];
-  const turler = useMemo(() => ["Tümü", ...Array.from(new Set(records.map((r) => String(r.talep_turu)).filter(Boolean)))], [records]);
-
+  const records = (getModule(MOD)?.records ?? []) as DynamicRecord[];
   const sayac = useMemo(() => {
     const c: Record<string, number> = { Tümü: records.length, Yeni: 0, İncelemede: 0, Onaylandı: 0, Reddedildi: 0, Tamamlandı: 0 };
     records.forEach((r) => { const d = String(r.durum); if (c[d] != null) c[d]++; });
     return c;
   }, [records]);
-  const acil = records.filter((r) => String(r.oncelik) === "Acil" && !/Tamamlandı|Reddedildi/.test(String(r.durum))).length;
 
   const liste = useMemo(() => {
     const qn = q.trim().toLocaleLowerCase("tr");
     return records
       .filter((r) => (filtre === "Tümü" ? true : String(r.durum) === filtre))
-      .filter((r) => (tur === "Tümü" ? true : String(r.talep_turu) === tur))
       .filter((r) => (qn ? [r.talep_no, r.konu, r.talep_eden, r.aciklama, r.talep_turu].some((v) => String(v ?? "").toLocaleLowerCase("tr").includes(qn)) : true))
       .sort((a, b) => String(b.tarih ?? "").localeCompare(String(a.tarih ?? "")));
-  }, [records, filtre, tur, q]);
+  }, [records, filtre, q]);
 
-  const setDurum = (r: DynamicRecord, durum: Durum) => updateRecord(MOD, String(r.id), { durum });
+  // Defter: tarihe göre grupla
+  const byDate = useMemo(() => {
+    const m = new Map<string, DynamicRecord[]>();
+    for (const r of liste) { const d = String(r.tarih ?? ""); if (!m.has(d)) m.set(d, []); m.get(d)!.push(r); }
+    return [...m.entries()];
+  }, [liste]);
 
-  // Pano (Kanban) görünümü — durum kolonları, kartı sürükle-bırak ile durum değiştir
-  const PANO_KOLON: Durum[] = ["Yeni", "İncelemede", "Onaylandı", "Reddedildi", "Tamamlandı"];
-  const panoList = useMemo(() => {
-    const qn = q.trim().toLocaleLowerCase("tr");
-    return records
-      .filter((r) => (tur === "Tümü" ? true : String(r.talep_turu) === tur))
-      .filter((r) => (qn ? [r.talep_no, r.konu, r.talep_eden, r.aciklama, r.talep_turu].some((v) => String(v ?? "").toLocaleLowerCase("tr").includes(qn)) : true));
-  }, [records, tur, q]);
-  const drop = (d: Durum) => { if (dragId) updateRecord(MOD, dragId, { durum: d }); setDragId(null); setOver(null); };
-
-  const KPI = ({ icon: Icon, label, value, color }: { icon: LucideIcon; label: string; value: string; color: string }) => (
-    <div className="card flex items-center gap-3 p-4">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: `${color}18`, color }}><Icon size={18} /></span>
-      <div><p className="text-xl font-bold" style={{ color }}>{value}</p><p className="text-[11px] text-muted">{label}</p></div>
-    </div>
-  );
+  const reset = () => { setEditRec("new"); setFormKey((k) => k + 1); };
+  const duzelt = (r: DynamicRecord) => { setEditRec(r); setFormKey((k) => k + 1); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const onayaGonder = (r: DynamicRecord) => {
+    addRecord("mod-T-0045", { konu: String(r.konu), tarih: String(r.tarih || now()), durum: "Bekliyor", aciklama: `İstek: ${String(r.talep_turu)} · ${String(r.konu)}${Number(r.tutar) ? " · " + tl(r.tutar) : ""}` });
+    updateRecord(MOD, String(r.id), { durum: "İncelemede" });
+  };
+  const istekMetni = (r: DynamicRecord) => [
+    `İstek No: ${String(r.talep_no || "")}`, `Tür: ${String(r.talep_turu || "")}`, `Konu: ${String(r.konu || "")}`,
+    `Talep Eden: ${String(r.talep_eden || "—")}`, `Durum: ${String(r.durum || "")}`, `Öncelik: ${String(r.oncelik || "Normal")}`,
+    r.tutar ? `Tutar: ${tl(r.tutar)}` : "", `Tarih: ${dmy(String(r.tarih || ""))}`, r.onay_zinciri ? `Onay Zinciri: ${String(r.onay_zinciri)}` : "",
+    r.aciklama ? `\n${String(r.aciklama)}` : "",
+  ].filter(Boolean).join("\n");
 
   return (
-    <div className="max-w-[1280px] space-y-5 px-4 py-6 md:px-6">
-      {/* Üst bar */}
+    <div className="mx-auto max-w-[1500px] space-y-4 p-4 md:p-6">
+      {/* Başlık */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-neon-blue/10 text-neon-blue"><Inbox size={20} /></span>
-          <div>
-            <h1 className="flex items-center gap-2 text-2xl font-bold text-ink"><Inbox size={22} className="text-neon-blue" /> Talepler Merkezi <span className="rounded-md border border-line bg-base/60 px-1.5 py-0.5 font-mono text-[11px] font-normal text-muted">T-0076</span></h1>
-            <p className="mt-1 text-sm text-muted">{sayac.Yeni + sayac.İncelemede} açık talep · tüm türler tek yerde</p>
-          </div>
+        <div>
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-ink"><Inbox size={22} className="text-neon-blue" /> İstekler <span className="rounded-md border border-line bg-base/60 px-1.5 py-0.5 font-mono text-[11px] font-normal text-muted">T-0076</span></h1>
+          <p className="mt-1 text-sm text-muted">{sayac.Yeni + sayac.İncelemede} açık istek · solda yeni istek formu · sağda defter (tarihe göre)</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Talep ara…" className="w-52 rounded-lg border border-line bg-panel py-2 pl-9 pr-8 text-sm text-ink outline-none transition focus:w-64 focus:border-neon-blue focus:ring-2 focus:ring-neon-blue/20" />
-            {q && <button onClick={() => setQ("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-faint hover:text-ink"><X size={14} /></button>}
-          </div>
-          <div className="flex overflow-hidden rounded-lg border border-line">
-            <button onClick={() => setView("liste")} className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition ${view === "liste" ? "bg-neon-blue text-white" : "text-muted hover:bg-elevated"}`}><List size={14} /> Liste</button>
-            <button onClick={() => setView("pano")} className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition ${view === "pano" ? "bg-neon-blue text-white" : "text-muted hover:bg-elevated"}`}><LayoutGrid size={14} /> Pano</button>
-          </div>
-          <button onClick={() => setModal("new")} className="flex items-center gap-1.5 rounded-lg bg-neon-blue px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-110"><Plus size={16} /> Yeni Talep</button>
+        <div className="relative">
+          <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="İstek ara…" className="w-56 rounded-lg border border-line bg-panel py-2 pl-9 pr-8 text-sm text-ink outline-none transition focus:border-neon-blue focus:ring-2 focus:ring-neon-blue/20" />
+          {q && <button onClick={() => setQ("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-faint hover:text-ink"><X size={14} /></button>}
         </div>
       </div>
 
-      {/* KPI */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <KPI icon={Inbox} label="Toplam" value={String(sayac.Tümü)} color="#0F2544" />
-        <KPI icon={Clock} label="Yeni" value={String(sayac.Yeni)} color="#0A4EA2" />
-        <KPI icon={Eye} label="İncelemede" value={String(sayac.İncelemede)} color="#B5731A" />
-        <KPI icon={Check} label="Tamamlanan" value={String(sayac.Tamamlandı)} color="#4B3FB0" />
-        <KPI icon={Zap} label="Acil (açık)" value={String(acil)} color="#C1292E" />
-      </div>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+        {/* SOL — Yeni / Düzenle istek formu (tür seçici + iki sütunlu form) */}
+        <div className="w-full shrink-0 lg:w-[440px]">
+          <div className="sticky top-4 card max-h-[calc(100vh-7rem)] overflow-y-auto p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="flex items-center gap-1.5 text-sm font-bold text-ink"><Plus size={15} className="text-neon-blue" /> {editRec === "new" ? "Yeni İstek" : "İsteği Düzenle"}</h2>
+              {editRec !== "new" && <button onClick={reset} className="rounded-lg border border-line px-2 py-1 text-xs text-muted transition hover:text-ink">+ Yeni</button>}
+            </div>
+            <TalepForm key={formKey} initial={editRec} onClose={reset} />
+          </div>
+        </div>
 
-      {/* Filtreler */}
-      <div className="flex flex-wrap items-center gap-2">
-        {view === "liste" && (
-          <div className="flex flex-wrap items-center gap-1.5">
+        {/* SAĞ — İstekler defteri (tarihe göre sıralı) */}
+        <div className="min-w-0 flex-1">
+          <div className="mb-3 flex flex-wrap items-center gap-1.5">
             {FILTRELER.map((f) => (
               <button key={f} onClick={() => setFiltre(f)} className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition ${filtre === f ? "border-neon-blue bg-neon-blue text-white" : "border-line bg-panel text-muted hover:text-ink"}`}>
                 {f}<span className={`rounded-full px-1.5 text-[10px] font-bold ${filtre === f ? "bg-white/25 text-white" : "bg-elevated text-muted"}`}>{sayac[f] ?? 0}</span>
               </button>
             ))}
           </div>
-        )}
-        {view === "pano" && <p className="text-xs text-muted">Kartı başka kolona <b className="text-ink">sürükleyip bırakarak</b> durumunu değiştir.</p>}
-        <select value={tur} onChange={(e) => setTur(e.target.value)} className="ml-auto rounded-lg border border-line bg-panel px-3 py-1.5 text-sm text-ink outline-none focus:border-neon-blue">
-          {turler.map((t) => <option key={t}>{t}</option>)}
-        </select>
+
+          {byDate.length === 0 ? (
+            <div className="card grid place-items-center gap-2 p-16 text-center"><Inbox size={34} className="text-faint" /><p className="text-sm text-muted">Bu filtrede istek yok. Soldan yeni istek oluşturun.</p></div>
+          ) : (
+            <div className="space-y-5">
+              {byDate.map(([date, rows]) => (
+                <div key={date}>
+                  <div className="mb-1.5 flex items-center gap-2"><span className="text-sm font-bold text-ink nums">{dmy(date) || "Tarihsiz"}</span><span className="h-px flex-1 bg-line" /><span className="text-[11px] text-muted">{rows.length} istek</span></div>
+                  <div className="space-y-1.5">
+                    {rows.map((r) => {
+                      const durum = String(r.durum); const st = DURUM_STYLE[durum] ?? DURUM_STYLE.Yeni; const Tur = TUR_ICON(String(r.talep_turu)); const StIcon = st.icon; const onem = String(r.oncelik || "Normal"); const acik = durum === "Yeni" || durum === "İncelemede";
+                      return (
+                        <div key={r.id} className="group flex items-center gap-3 rounded-lg border border-line bg-panel px-3 py-2.5 transition hover:border-neon-blue/40 hover:shadow-sm">
+                          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg" style={{ background: st.bg, color: st.text }}><Tur size={16} /></span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => duzelt(r)} className="truncate text-left text-sm font-semibold text-ink hover:underline">{String(r.konu)}</button>
+                              <span className="flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold" style={{ background: st.bg, color: st.text }}><StIcon size={10} /> {durum}</span>
+                              {Number(r.tutar) ? <span className="ml-auto shrink-0 font-mono text-[12px] font-bold text-ink nums">{tl(r.tutar)}</span> : null}
+                            </div>
+                            <p className="flex flex-wrap items-center gap-x-2 text-[11px] text-muted">
+                              <span className="font-mono text-faint">{String(r.talep_no || "")}</span>
+                              <span>· {String(r.talep_turu)}</span>
+                              <span>· {String(r.talep_eden || "—")}</span>
+                              <span className="flex items-center gap-0.5" style={{ color: ONEM_RENK[onem] }}><Flag size={9} /> {onem}</span>
+                            </p>
+                          </div>
+                          {/* Sağ aksiyonlar: Düzelt · Onaya Gönder · Mesaj Gönder */}
+                          <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+                            <button onClick={() => duzelt(r)} title="Düzelt" className="grid h-7 w-7 place-items-center rounded-lg text-faint transition hover:bg-neon-blue/10 hover:text-neon-blue"><Pencil size={14} /></button>
+                            {acik && <button onClick={() => onayaGonder(r)} title="Onaya gönder" className="grid h-7 w-7 place-items-center rounded-lg text-faint transition hover:bg-good/10 hover:text-good"><Send size={14} /></button>}
+                            <button onClick={() => setMsgModal({ baslik: `İstek (PDF) — ${String(r.talep_no || "")}`, icerik: istekMetni(r) })} title="Mesaj olarak gönder" className="grid h-7 w-7 place-items-center rounded-lg text-faint transition hover:bg-neon-blue/10 hover:text-neon-blue"><MessageSquare size={14} /></button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Pano (Kanban) — kolonlar = durum, kart sürükle-bırak */}
-      {view === "pano" ? (
-        <div className="flex gap-3 overflow-x-auto pb-3">
-          {PANO_KOLON.map((d) => {
-            const st = DURUM_STYLE[d]; const SI = st.icon;
-            const cards = panoList.filter((r) => String(r.durum) === d);
-            return (
-              <div key={d} onDragOver={(e) => { e.preventDefault(); setOver(d); }} onDragLeave={() => setOver((s) => (s === d ? null : s))} onDrop={() => drop(d)}
-                className={`flex w-[280px] shrink-0 flex-col rounded-xl border bg-base/60 transition ${over === d ? "border-neon-blue ring-2 ring-neon-blue/30" : "border-line"}`}>
-                <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2" style={{ borderTopColor: st.text, borderTopWidth: 3 }}>
-                  <span className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: st.text }}><SI size={13} /> {d}</span>
-                  <span className="rounded-full bg-elevated px-1.5 text-[11px] font-medium text-muted">{cards.length}</span>
-                </div>
-                <div className="flex min-h-[100px] flex-1 flex-col gap-2 p-2">
-                  {cards.map((r) => {
-                    const Tur = TUR_ICON(String(r.talep_turu)); const onem = String(r.oncelik || "Normal");
-                    return (
-                      <div key={r.id} draggable onDragStart={() => setDragId(String(r.id))} onDragEnd={() => { setDragId(null); setOver(null); }}
-                        className={`cursor-grab rounded-lg border border-line bg-panel p-3 shadow-sm transition hover:border-neon-blue/50 active:cursor-grabbing ${dragId === String(r.id) ? "opacity-40" : ""}`}>
-                        <div className="flex items-start gap-2">
-                          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg" style={{ background: st.bg, color: st.text }}><Tur size={14} /></span>
-                          <button onClick={() => setModal(r)} className="min-w-0 flex-1 truncate text-left text-sm font-semibold leading-tight text-ink hover:underline">{String(r.konu)}</button>
-                        </div>
-                        <p className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[10px] text-muted">
-                          <span className="font-mono text-faint">{String(r.talep_no || "")}</span>
-                          <span>· {String(r.talep_turu)}</span>
-                        </p>
-                        <div className="mt-1.5 flex items-center justify-between">
-                          <span className="flex items-center gap-0.5 text-[10px] font-medium" style={{ color: ONEM_RENK[onem] }}><Flag size={9} /> {onem}</span>
-                          {Number(r.tutar) ? <span className="font-mono text-[11px] font-bold text-ink nums">{tl(r.tutar)}</span> : null}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {cards.length === 0 && <p className="grid flex-1 place-items-center text-[11px] text-faint">Buraya sürükleyin</p>}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : liste.length === 0 ? (
-        <div className="card grid place-items-center gap-2 p-16 text-center"><Inbox size={34} className="text-faint" /><p className="text-sm text-muted">Bu filtrede talep yok.</p></div>
-      ) : (
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          {liste.map((r) => {
-            const durum = String(r.durum);
-            const st = DURUM_STYLE[durum] ?? DURUM_STYLE.Yeni;
-            const Tur = TUR_ICON(String(r.talep_turu));
-            const StIcon = st.icon;
-            const onem = String(r.oncelik || "Normal");
-            const acikMi = durum === "Yeni" || durum === "İncelemede";
-            return (
-              <div key={r.id} className="card flex flex-col gap-3 p-4 transition hover:shadow-md">
-                <div className="flex items-start gap-3">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: st.bg, color: st.text }}><Tur size={18} /></span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <button onClick={() => setModal(r)} className="truncate text-left text-sm font-bold text-ink hover:underline">{String(r.konu)}</button>
-                      <span className="flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: st.bg, color: st.text }}><StIcon size={11} /> {durum}</span>
-                    </div>
-                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-muted">
-                      <span className="font-mono text-faint">{String(r.talep_no || "")}</span>
-                      <span>· {String(r.talep_turu)}</span>
-                      <span className="flex items-center gap-0.5" style={{ color: ONEM_RENK[onem] }}><Flag size={10} /> {onem}</span>
-                      <span>· {dmy(String(r.tarih))}</span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted">
-                  <span className="flex items-center gap-1.5"><span className="text-faint">Talep:</span><span className="font-medium text-ink">{String(r.talep_eden || "—")}</span><ArrowRight size={11} className="text-faint" /><span className="font-medium text-ink">{String(r.atanan || "—")}</span></span>
-                  {Number(r.tutar) ? <span className="ml-auto font-mono text-sm font-bold text-ink nums">{tl(r.tutar)}</span> : null}
-                </div>
-
-                {r.aciklama ? <p className="rounded-lg bg-base/60 px-3 py-2 text-[12px] text-ink/70">{String(r.aciklama)}</p> : null}
-
-                {acikMi && (
-                  <div className="flex items-center gap-2 border-t border-line pt-3">
-                    <button onClick={() => setDurum(r, "Onaylandı")} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-good px-3 py-2 text-xs font-semibold text-white transition hover:brightness-110"><Check size={14} /> Onayla</button>
-                    {durum !== "İncelemede" && <button onClick={() => setDurum(r, "İncelemede")} className="flex items-center justify-center gap-1.5 rounded-lg border border-line px-3 py-2 text-xs font-medium text-muted transition hover:text-ink"><Eye size={14} /> İncele</button>}
-                    <button onClick={() => setDurum(r, "Reddedildi")} className="flex items-center justify-center gap-1.5 rounded-lg border border-critical/40 px-3 py-2 text-xs font-medium text-critical transition hover:bg-critical/10"><X size={14} /> Reddet</button>
-                  </div>
-                )}
-                {durum === "Onaylandı" && (
-                  <button onClick={() => setDurum(r, "Tamamlandı")} className="flex items-center justify-center gap-1.5 rounded-lg border border-neon-violet/40 bg-neon-violet/5 px-3 py-2 text-xs font-semibold text-neon-violet transition hover:bg-neon-violet/10"><CheckCircle2 size={14} /> Tamamlandı Olarak İşaretle</button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Ekle / Düzenle modal */}
-      {modal && mod && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 py-10 backdrop-blur-sm" onClick={() => setModal(null)}>
-          <div className="w-full max-w-2xl rounded-2xl border border-line bg-panel shadow-card animate-fade-in" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-line px-5 py-3">
-              <h3 className="text-sm font-semibold text-ink">{modal === "new" ? "Yeni Talep / Form" : String((modal as DynamicRecord).konu ?? "Talep")}</h3>
-              <button onClick={() => setModal(null)} className="grid h-8 w-8 place-items-center rounded-lg text-muted transition hover:bg-elevated"><X size={16} /></button>
-            </div>
-            <div className="p-4"><TalepForm initial={modal === "new" ? "new" : (modal as DynamicRecord)} onClose={() => setModal(null)} /></div>
-          </div>
-        </div>
-      )}
+      {msgModal && <MesajGonderModal baslik={msgModal.baslik} icerik={msgModal.icerik} onClose={() => setMsgModal(null)} />}
     </div>
   );
 }
