@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Wallet, ChevronLeft, ChevronRight, Plus, Trash2, Printer, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { Wallet, ChevronLeft, ChevronRight, Plus, Trash2, Printer, Mail, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { useUsers } from "@/context/UsersContext";
 
-const STORAGE_KEY = "timay.kasa-defteri.v1";
+const STORAGE_KEY = "timay.kasa-defteri.v2";
 const pad = (n: number) => String(n).padStart(2, "0");
 const dstr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const dmy = (iso: string) => (iso ? iso.split("-").reverse().join(".") : "");
@@ -10,18 +11,27 @@ const TR_AY = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz",
 const TR_GUN = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
 const tl = (n: number) => (n || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₺";
 
-type Row = { id: string; aciklama: string; tutar: number; kaynak?: string };
+type Row = { id: string; tarih?: string; tur?: string; aciklama: string; tutar: number };
 type DayBook = { devir?: number; giren: Row[]; cikan: Row[] };
 type Book = Record<string, DayBook>;
+// Giren/çıkan satırlarında seçilebilir tür (nereden/nereye)
+const GIREN_TUR = ["Kasa", "Banka", "Cari", "Dava", "Avukat", "Tahsilat", "Diğer"];
+const CIKAN_TUR = ["Masraf", "Cari", "Personel", "Kasa", "Banka", "Vergi", "Tedarikçi", "Diğer"];
 
-const loadBook = (): Book => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch { return {}; } };
+// Her kullanıcının kendi defteri → veri kullanıcı kimliğine göre saklanır
+const loadAll = (): Record<string, Book> => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch { return {}; } };
 const rid = () => "k" + Math.random().toString(36).slice(2, 9);
 
 export default function KasaDefteri() {
-  const [book, setBook] = useState<Book>(loadBook);
+  const { currentUser } = useUsers();
+  const [allData, setAllData] = useState<Record<string, Book>>(loadAll);
   const [cur, setCur] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); });
 
-  useEffect(() => { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(book)); } catch { /* kota */ } }, [book]);
+  useEffect(() => { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(allData)); } catch { /* kota */ } }, [allData]);
+
+  const uid = currentUser.id;
+  const book: Book = allData[uid] ?? {};
+  const setBook = (fn: (b: Book) => Book) => setAllData((d) => ({ ...d, [uid]: fn(d[uid] ?? {}) }));
 
   const curDate = new Date(cur);
   const curStr = dstr(curDate);
@@ -43,7 +53,7 @@ export default function KasaDefteri() {
   const yarinaDevir = dundenDevir + girenTop - cikanTop;
 
   const setDay = (patch: Partial<DayBook>) => setBook((b) => { const base: DayBook = b[curStr] ?? { giren: [], cikan: [] }; return { ...b, [curStr]: { ...base, ...patch } }; });
-  const addRow = (side: "giren" | "cikan") => setDay({ [side]: [...day[side], { id: rid(), aciklama: "", tutar: 0 }] } as Partial<DayBook>);
+  const addRow = (side: "giren" | "cikan") => setDay({ [side]: [...day[side], { id: rid(), tarih: curStr, tur: "", aciklama: "", tutar: 0 }] } as Partial<DayBook>);
   const updRow = (side: "giren" | "cikan", id: string, patch: Partial<Row>) => setDay({ [side]: day[side].map((r) => (r.id === id ? { ...r, ...patch } : r)) } as Partial<DayBook>);
   const delRow = (side: "giren" | "cikan", id: string) => setDay({ [side]: day[side].filter((r) => r.id !== id) } as Partial<DayBook>);
   const setDevirOverride = (v: string) => { const n = v.trim() === "" ? undefined : Number(v); setDay({ devir: isNaN(n as number) ? undefined : n }); };
@@ -51,9 +61,23 @@ export default function KasaDefteri() {
   const nav = (d: number) => setCur((c) => c + d * ONE);
   const bugun = () => { const d = new Date(); d.setHours(0, 0, 0, 0); setCur(d.getTime()); };
 
+  // Yazdır/Gönder için düz metin dökümü
+  const defterText = () => {
+    const ls = (arr: Row[], lbl: string) => (arr.length ? `\n${lbl}:\n` + arr.map((r) => `  ${dmy(r.tarih || curStr)} · ${r.tur || "-"} · ${r.aciklama || "-"} · ${tl(r.tutar)}`).join("\n") : "");
+    return [
+      `${currentUser.name} — KASA DEFTERİ (${dmy(curStr)})`,
+      `Dünden Devir: ${tl(dundenDevir)}`,
+      ls(day.giren, "GİRENLER"), `Girenler Toplamı: ${tl(girenTop)}`,
+      ls(day.cikan, "ÇIKANLAR"), `Çıkanlar Toplamı: ${tl(cikanTop)}`,
+      `YARINA DEVİR: ${tl(yarinaDevir)}`,
+    ].filter(Boolean).join("\n");
+  };
+  const yazdir = () => { const w = window.open("", "_blank", "width=820,height=1000"); if (!w) return; w.document.write(`<pre style="font-family:Georgia,serif;font-size:12pt;white-space:pre-wrap;line-height:1.6;padding:40px">${defterText().replace(/</g, "&lt;")}</pre>`); w.document.close(); w.focus(); w.print(); };
+  const gonder = () => { window.location.href = `mailto:?subject=${encodeURIComponent(`Kasa Defteri — ${currentUser.name} — ${dmy(curStr)}`)}&body=${encodeURIComponent(defterText())}`; };
+
   const inp = "w-full rounded border border-black/10 bg-white/70 px-2 py-1 text-[13px] text-ink outline-none focus:border-neon-blue";
 
-  const Column = ({ side, title, color, Icon }: { side: "giren" | "cikan"; title: string; color: string; Icon: typeof ArrowDownLeft }) => {
+  const Column = ({ side, title, color, Icon, turOpts }: { side: "giren" | "cikan"; title: string; color: string; Icon: typeof ArrowDownLeft; turOpts: string[] }) => {
     const rows = day[side];
     const toplam = side === "giren" ? girenTop : cikanTop;
     return (
@@ -70,11 +94,20 @@ export default function KasaDefteri() {
               className="w-28 rounded border border-amber-300 bg-white/80 px-2 py-0.5 text-right text-[13px] font-semibold text-amber-900 outline-none nums" title="Boş bırak = otomatik (önceki bakiye); elle gir = devri değiştir" />
           </div>
         )}
-        <div className="min-h-[300px] flex-1 divide-y divide-black/5 border-x border-black/10 bg-white/40">
+        {/* Başlık satırı */}
+        <div className="flex items-center gap-1.5 border-x border-b border-black/10 bg-black/[0.03] px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-ink/45">
+          <span className="w-24 shrink-0">Tarih</span><span className="w-24 shrink-0">Tür</span><span className="flex-1">Açıklama</span><span className="w-24 shrink-0 text-right">Tutar</span><span className="w-6 shrink-0" />
+        </div>
+        <div className="min-h-[280px] flex-1 divide-y divide-black/5 border-x border-black/10 bg-white/40">
           {rows.map((r) => (
             <div key={r.id} className="group flex items-center gap-1.5 px-2 py-1">
+              <input value={r.tarih || curStr} onChange={(e) => updRow(side, r.id, { tarih: e.target.value })} type="date" className={`${inp} w-24 shrink-0 text-[11px]`} />
+              <select value={r.tur || ""} onChange={(e) => updRow(side, r.id, { tur: e.target.value })} className={`${inp} w-24 shrink-0`}>
+                <option value="">—</option>
+                {turOpts.map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
               <input value={r.aciklama} onChange={(e) => updRow(side, r.id, { aciklama: e.target.value })} placeholder="Açıklama" className={`${inp} flex-1`} />
-              <input value={r.tutar || ""} onChange={(e) => updRow(side, r.id, { tutar: Number(e.target.value) || 0 })} placeholder="0,00" type="number" className={`${inp} w-28 text-right nums`} />
+              <input value={r.tutar || ""} onChange={(e) => updRow(side, r.id, { tutar: Number(e.target.value) || 0 })} placeholder="0,00" type="number" className={`${inp} w-24 shrink-0 text-right nums`} />
               <button onClick={() => delRow(side, r.id)} className="grid h-6 w-6 shrink-0 place-items-center rounded text-ink/30 opacity-0 transition hover:text-critical group-hover:opacity-100"><Trash2 size={13} /></button>
             </div>
           ))}
@@ -94,11 +127,12 @@ export default function KasaDefteri() {
       <div className="flex flex-wrap items-center gap-2">
         <span className="grid h-10 w-10 place-items-center rounded-xl bg-neon-blue/10 text-neon-blue"><Wallet size={20} /></span>
         <div>
-          <h1 className="text-xl font-bold text-ink">Harcama / Kasa Defteri</h1>
-          <p className="text-xs text-muted">Girenler · Çıkanlar · dünden devir · sayfa toplamları · yarına devir otomatik</p>
+          <h1 className="text-xl font-bold text-ink">{currentUser.name} · Kasa Defteri</h1>
+          <p className="text-xs text-muted">Kişisel kasa defteriniz · Girenler · Çıkanlar · dünden devir · sayfa toplamları · yarına devir otomatik</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <button onClick={() => window.print()} className="no-print flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm text-muted transition hover:bg-elevated hover:text-ink"><Printer size={15} /> Yazdır</button>
+          <button onClick={yazdir} className="no-print flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm text-muted transition hover:bg-elevated hover:text-ink"><Printer size={15} /> Yazdır</button>
+          <button onClick={gonder} className="no-print flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm text-muted transition hover:bg-elevated hover:text-ink"><Mail size={15} /> Gönder</button>
         </div>
       </div>
 
@@ -113,8 +147,8 @@ export default function KasaDefteri() {
       {/* Defter — iki sütun */}
       <div className="overflow-hidden rounded-xl border border-black/10 shadow-[0_8px_24px_rgba(0,0,0,0.12)]" style={{ background: "#FBF7EC" }}>
         <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
-          <Column side="giren" title="GİRENLER" color="#1E7A46" Icon={ArrowDownLeft} />
-          <Column side="cikan" title="ÇIKANLAR" color="#C1292E" Icon={ArrowUpRight} />
+          <Column side="giren" title="GİRENLER" color="#1E7A46" Icon={ArrowDownLeft} turOpts={GIREN_TUR} />
+          <Column side="cikan" title="ÇIKANLAR" color="#C1292E" Icon={ArrowUpRight} turOpts={CIKAN_TUR} />
         </div>
 
         {/* Alt: genel toplam + yarına devir (sağ alt) */}
