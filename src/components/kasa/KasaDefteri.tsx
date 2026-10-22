@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Wallet, ChevronLeft, ChevronRight, Plus, Trash2, Printer, Mail, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { useUsers } from "@/context/UsersContext";
 import { useModules } from "@/context/ModulesContext";
+import { openReport } from "@/lib/tableReport";
 
 const STORAGE_KEY = "timay.kasa-defteri.v3";
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -43,6 +44,7 @@ export default function KasaDefteri() {
   const davalar = (getModule("mod-T-0016")?.records ?? []) as Array<Record<string, unknown>>;
   const avukatlar = (getModule("mod-T-0017")?.records ?? []) as Array<Record<string, unknown>>;
   const kasalar = (getModule("mod-T-0006")?.records ?? []) as Array<Record<string, unknown>>;
+  const masrafKartlari = (getModule("mod-T-0008")?.records ?? []) as Array<Record<string, unknown>>;
 
   const [allData, setAllData] = useState<Record<string, Book>>(loadAll);
   const [cur, setCur] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); });
@@ -90,7 +92,21 @@ export default function KasaDefteri() {
     if (tur === "Avukat") return avukatlar.map((a) => String(a.avukat)).filter(Boolean);
     if (tur === "Personel") return users.filter((u) => u.active).map((u) => u.name);
     if (/Kasa|Banka/.test(tur)) return kasalar.map((k) => String(k.ad)).filter(Boolean);
+    if (/Masraf|Vergi/.test(tur)) return masrafKartlari.map((m) => String(m.ad)).filter(Boolean);
     return [];
+  };
+
+  // Türe göre hangi finans tablosuna işlenecek (elle eklenen/değiştirilen satırlar için)
+  const hedefForTur = (tur: string, yon: Yon): { mod: string; base: Record<string, unknown> } | null => {
+    switch (tur) {
+      case "Cari": case "Tedarikçi": return { mod: "mod-T-0005", base: {} };
+      case "Tahsilat": return { mod: "mod-T-0007", base: { islem_turu: "Giriş (+)", onay_durumu: "Onaylandı" } };
+      case "Kasa": return { mod: "mod-T-0007", base: { islem_turu: yon === "Giren" ? "Giriş (+)" : "Çıkış (−)" } };
+      case "Banka": return { mod: "mod-T-0007", base: { islem_turu: yon === "Giren" ? "Giriş (+)" : "Çıkış (−)", kasa: "Banka" } };
+      case "Masraf": case "Vergi": case "Personel": case "Avukat": return { mod: "mod-T-0010", base: { onay_durumu: "Taslak" } };
+      case "Dava": return { mod: "mod-T-0084", base: { tur: yon === "Giren" ? "Tahsilat (+)" : "Masraf (−)", kalem: yon === "Giren" ? "Vekâlet Ücreti" : "Dosya Masrafı" } };
+      default: return null;
+    }
   };
 
   // Hızlı işlem → hangi tabloya işlenecek
@@ -112,19 +128,23 @@ export default function KasaDefteri() {
   const addQuick = (q: Quick) => { const h = hedefFor(q.label); addEntry({ yon: q.yon, tur: q.tur, aciklama: q.label, hedefMod: h?.mod, hedefBase: h?.base }); };
   // Tutar girilip alandan çıkınca ilgili tabloya işle (bir kez)
   const propagate = (r: Row) => {
-    if (!r.hedefMod || r.propagated || !(Number(r.tutar) > 0)) return;
-    const data: Record<string, unknown> = { ...(r.hedefBase ?? {}), tarih: r.tarih || curStr, tutar: Number(r.tutar), aciklama: r.aciklama };
-    if (r.hedefMod === "mod-T-0005") { if (r.yon === "Giren") data.alacak = Number(r.tutar); else data.borc = Number(r.tutar); data.kayit_tarihi = r.tarih || curStr; }
+    if (r.propagated || !(Number(r.tutar) > 0)) return;
+    // Hızlı işlemle gelen hedef yoksa türe göre türet (elle eklenen satırlar)
+    const hedefMod = r.hedefMod ?? hedefForTur(r.tur || "", r.yon)?.mod;
+    const hedefBase = r.hedefMod ? (r.hedefBase ?? {}) : (hedefForTur(r.tur || "", r.yon)?.base ?? {});
+    if (!hedefMod) return;
+    const data: Record<string, unknown> = { ...hedefBase, tarih: r.tarih || curStr, tutar: Number(r.tutar), aciklama: r.aciklama };
+    if (hedefMod === "mod-T-0005") { if (r.yon === "Giren") data.alacak = Number(r.tutar); else data.borc = Number(r.tutar); data.kayit_tarihi = r.tarih || curStr; }
     const ilg = r.ilgili || "";
     if (ilg) {
-      if (r.hedefMod === "mod-T-0007") data.cari = ilg;
-      else if (r.hedefMod === "mod-T-0010") data.personel = ilg;
-      else if (r.hedefMod === "mod-T-0005") data.cari_kod = ilg;
-      else if (r.hedefMod === "mod-T-0084") data.dosya_no = ilg.split(" · ")[0];
+      if (hedefMod === "mod-T-0007") data.cari = ilg;
+      else if (hedefMod === "mod-T-0010") { if (/Personel|Avukat/.test(r.tur || "")) data.personel = ilg; else data.masraf_karti = ilg; }
+      else if (hedefMod === "mod-T-0005") data.cari_kod = ilg;
+      else if (hedefMod === "mod-T-0084") data.dosya_no = ilg.split(" · ")[0];
     }
-    addRecord(r.hedefMod, data);
-    updEntry(r.id, { propagated: true });
-    setNote(`"${r.aciklama || r.tur}" ${tl(Number(r.tutar))} ilgili tabloya işlendi ✓`);
+    addRecord(hedefMod, data);
+    updEntry(r.id, { propagated: true, hedefMod });
+    setNote(`"${r.aciklama || r.tur}" ${tl(Number(r.tutar))} finans tablosuna işlendi ✓`);
     window.setTimeout(() => setNote(""), 2800);
   };
 
@@ -135,7 +155,40 @@ export default function KasaDefteri() {
     const satir = withBal.map(({ e, bakiye }) => `${dmy(e.tarih || curStr)} · ${e.yon} · ${e.tur || "-"}${e.ilgili ? ` (${e.ilgili})` : ""} · ${e.aciklama || "-"} · ${e.yon === "Giren" ? "+" : "−"}${tl(e.tutar)} · Bakiye ${tl(bakiye)}`).join("\n");
     return [`${currentUser.name} — KASA DEFTERİ (${dmy(curStr)})`, `Dünden Devir: ${tl(dundenDevir)}`, "", satir, "", `Girenler: ${tl(girenTop)} · Çıkanlar: ${tl(cikanTop)} · Yarına Devir: ${tl(yarinaDevir)}`].join("\n");
   };
-  const yazdir = () => { const w = window.open("", "_blank", "width=900,height=1000"); if (!w) return; w.document.write(`<pre style="font-family:Georgia,serif;font-size:11pt;white-space:pre-wrap;line-height:1.6;padding:40px">${defterText().replace(/</g, "&lt;")}</pre>`); w.document.close(); w.focus(); w.print(); };
+  const yazdir = () => {
+    openReport({
+      title: "Kasa Raporu",
+      code: `${currentUser.name.toLocaleUpperCase("tr-TR")} · ${dmy(curStr)}`,
+      subtitle: `${currentUser.name} — ${curDate.getDate()} ${TR_AY[curDate.getMonth()]} ${curDate.getFullYear()} ${TR_GUN[(curDate.getDay() + 6) % 7]} · ${entries.length} hareket`,
+      summary: [
+        { label: "Dünden Devir", value: tl(dundenDevir), tone: dundenDevir < 0 ? "neg" : "accent" },
+        { label: "Girenler", value: tl(girenTop), tone: "pos" },
+        { label: "Çıkanlar", value: tl(cikanTop), tone: "neg" },
+        { label: "Yarına Devir", value: tl(yarinaDevir), tone: yarinaDevir < 0 ? "neg" : "accent" },
+      ],
+      columns: [
+        { label: "Tarih" }, { label: "Yön" }, { label: "Tür" }, { label: "İlgili" }, { label: "Açıklama" },
+        { label: "Giren", align: "right" }, { label: "Çıkan", align: "right" }, { label: "Bakiye", align: "right" },
+      ],
+      rows: withBal.map(({ e, bakiye }) => [
+        { text: dmy(e.tarih || curStr) },
+        { text: e.yon, tone: e.yon === "Giren" ? "pos" : "neg" },
+        { text: e.tur || "—" },
+        { text: e.ilgili || "—", tone: e.ilgili ? undefined : "muted" },
+        { text: e.aciklama || "—" },
+        { text: e.yon === "Giren" ? tl(e.tutar) : "—", align: "right", tone: e.yon === "Giren" ? "pos" : "muted" },
+        { text: e.yon === "Çıkan" ? tl(e.tutar) : "—", align: "right", tone: e.yon === "Çıkan" ? "neg" : "muted" },
+        { text: tl(bakiye), align: "right", tone: "strong" },
+      ]),
+      footRows: [[
+        { text: `Dünden Devir ${tl(dundenDevir)} · Sayfa Toplamları`, colSpan: 5, align: "right" },
+        { text: tl(girenTop), align: "right", tone: "pos" },
+        { text: tl(cikanTop), align: "right", tone: "neg" },
+        { text: `Yarına ${tl(yarinaDevir)}`, align: "right", tone: "accent" },
+      ]],
+      footNote: `Kasa Raporu · ${currentUser.name} · ${dmy(curStr)} tarihli defter · Timay Platform`,
+    });
+  };
   const gonder = () => { window.location.href = `mailto:?subject=${encodeURIComponent(`Kasa Defteri — ${currentUser.name} — ${dmy(curStr)}`)}&body=${encodeURIComponent(defterText())}`; };
 
   const inp = "w-full rounded border border-black/10 bg-white/70 px-2 py-1 text-[13px] text-ink outline-none focus:border-neon-blue";
@@ -190,12 +243,12 @@ export default function KasaDefteri() {
                   <tr key={r.id} className="group border-b border-black/5 align-middle">
                     <td className="px-1 py-1"><input value={r.tarih || curStr} onChange={(ev) => updEntry(r.id, { tarih: ev.target.value })} type="date" className={`${inp} text-[11px]`} /></td>
                     <td className="px-1 py-1">
-                      <select value={r.yon} onChange={(ev) => updEntry(r.id, { yon: ev.target.value as Yon })} className={`${inp} ${r.yon === "Giren" ? "text-good" : "text-critical"} font-semibold`}>
+                      <select value={r.yon} onChange={(ev) => { const y = ev.target.value as Yon; const h = hedefForTur(r.tur || "", y); updEntry(r.id, { yon: y, ...(h ? { hedefBase: h.base } : {}) }); }} className={`${inp} ${r.yon === "Giren" ? "text-good" : "text-critical"} font-semibold`}>
                         <option value="Giren">Giren</option><option value="Çıkan">Çıkan</option>
                       </select>
                     </td>
                     <td className="px-1 py-1">
-                      <select value={r.tur || ""} onChange={(ev) => updEntry(r.id, { tur: ev.target.value, ilgili: "" })} className={inp}>
+                      <select value={r.tur || ""} onChange={(ev) => { const h = hedefForTur(ev.target.value, r.yon); updEntry(r.id, { tur: ev.target.value, ilgili: "", propagated: false, hedefMod: h?.mod, hedefBase: h?.base }); }} className={inp}>
                         <option value="">Tür…</option>{TUR_LISTE.map((o) => <option key={o} value={o}>{o}</option>)}
                       </select>
                     </td>

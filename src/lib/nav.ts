@@ -51,7 +51,7 @@ export const WORKSPACES: Workspace[] = [
       { icon: ClipboardList, label: "Talepler", view: "talepler", kod: "T-0076" },
       { icon: StickyNote, label: "Notlar", view: "notlar", kod: "T-0068" },
       { icon: NotebookPen, label: "Toplantı Defteri", view: "tutanak", kod: "T-0063" },
-      { icon: Wallet, label: "Harcama Defteri", view: "kasa-defteri", kod: "KASA" },
+      { icon: Wallet, label: "Kasa Defteri", view: "kasa-defteri", kod: "KASA" },
     ],
   },
   {

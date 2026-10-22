@@ -10,6 +10,7 @@ import { useProjects } from "@/context/ProjectsContext";
 import { useUsers } from "@/context/UsersContext";
 import type { DynamicRecord } from "@/types/modules";
 import type { View } from "@/App";
+import { openDocReport } from "@/lib/tableReport";
 
 const MOD = "mod-T-0063";
 const HAND = "'Patrick Hand', 'Comic Sans MS', ui-rounded, cursive";
@@ -262,10 +263,38 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
     ].filter(Boolean).join("\n");
   };
   const yazdir = () => {
-    const w = window.open("", "_blank", "width=820,height=1000");
-    if (!w) return;
-    w.document.write(`<pre style="font-family:Georgia,'Times New Roman',serif;font-size:13pt;white-space:pre-wrap;line-height:1.6;padding:40px 50px">${tutanakText().replace(/</g, "&lt;")}</pre>`);
-    w.document.close(); w.focus(); w.print();
+    openDocReport({
+      title: "Toplantı Tutanağı",
+      code: `${String(sel.tutanak_no || "")}${tarihStr ? " · " + tarihStr : ""}`,
+      subtitle: String(sel.toplanti || ""),
+      meta: [
+        { label: "Tutanak No", value: String(sel.tutanak_no || "") },
+        { label: "Konu", value: String(sel.toplanti || "") },
+        { label: "Tarih", value: tarihStr + (gunStr ? ` ${gunStr}` : "") + (sel.saat ? ` / ${String(sel.saat)}` : "") },
+        { label: "Yer", value: String(sel.yer || "") },
+        { label: "Proje", value: String(sel.proje || "") },
+        { label: "İş / Görev", value: String(sel.is_gorev || "") },
+        { label: "Sorumlu Avukat", value: String(sel.avukat || "") },
+      ],
+      sections: [
+        { title: "Katılımcılar", items: katilimcilar },
+        { title: "Amaç", items: amac },
+        { title: "Gündem", items: gundem },
+        { title: "Görüşülen Konular", items: gorusulen },
+        { title: "Önemli Notlar", items: onemli },
+        { title: "Kararlar", items: kararlar },
+        {
+          title: "Aksiyonlar",
+          columns: [{ label: "İş" }, { label: "Sorumlu" }, { label: "Tarih" }, { label: "Durum", align: "center" }],
+          rows: aksArr.filter((a) => a.is).map((a) => [
+            { text: a.is }, { text: a.sor || "—" }, { text: a.trh ? dmy(a.trh) : "—" },
+            { text: a.drm || "—", align: "center" as const, tone: a.drm === "Tamamlandı" ? "pos" as const : a.drm === "Bekliyor" ? "neg" as const : undefined },
+          ]),
+          emptyText: "Aksiyon kaydı yok",
+        },
+      ],
+      footNote: `Toplantı Tutanağı ${String(sel.tutanak_no || "")} · Timay Platform`,
+    });
   };
   const mailGonder = () => {
     const subj = encodeURIComponent(`Toplantı Tutanağı ${String(sel.tutanak_no || "")} — ${String(sel.toplanti || "")}`);
