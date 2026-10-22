@@ -15,7 +15,7 @@ import {
 } from "@/types/modules";
 import { useAudit } from "@/context/AuditContext";
 
-const STORAGE_KEY = "timay.dynamic-modules.v72";
+const STORAGE_KEY = "timay.dynamic-modules.v73";
 
 interface NewModuleInput {
   name: string;
@@ -283,6 +283,24 @@ function specialTables(): DynamicModule[] {
       [
         { id: "du1", dosya_no: "DI-2026-0001", islem_turu: "Duruşma", tarih: "2026-11-12", saat: "10:30", mahkeme: "İstanbul 3. Asliye Ticaret Mah.", sonraki_islem: "Tanık listesi ve delil dilekçesi sun", durum: "Bekliyor", aciklama: "İlk duruşma; sulh görüşmesi değerlendirilecek." },
         { id: "du2", dosya_no: "DI-2026-0002", islem_turu: "İcra İşlemi", tarih: "2026-10-30", saat: "", mahkeme: "İstanbul 8. İcra Dairesi", sonraki_islem: "Ödeme emri kesinleşme kontrolü", durum: "Bekliyor", aciklama: "Haciz talebi hazırlığı." },
+      ],
+    ),
+    mkTbl("T-0085", "Ürün / Hizmet",
+      "Ürün ve hizmet kataloğu · kod · kategori · birim · fiyat · KDV — teklif/fatura/sözleşme kalemlerinde seçilir.", "Package",
+      [
+        { code: "ad", name: "Ürün / Hizmet Adı", type: "TEXT", required: true, visibility: "EVERYONE" },
+        { code: "kod", name: "Ürün Kodu", type: "TEXT", required: false, visibility: "EVERYONE" },
+        { code: "kategori", name: "Kategori", type: "DROPDOWN", required: false, visibility: "EVERYONE", options: ["Ürün", "Hizmet", "Yazılım", "Lisans", "Danışmanlık", "Diğer"] },
+        { code: "birim", name: "Birim", type: "DROPDOWN", required: false, visibility: "EVERYONE", options: ["Adet", "Saat", "Gün", "Ay", "Yıl", "Paket"] },
+        { code: "birim_fiyat", name: "Birim Fiyat (₺)", type: "NUMBER", required: false, visibility: "EVERYONE" },
+        { code: "kdv", name: "KDV", type: "DROPDOWN", required: false, visibility: "EVERYONE", options: ["%20", "%10", "%1", "%0"] },
+        { code: "durum", name: "Durum", type: "DROPDOWN", required: false, visibility: "EVERYONE", options: ["Aktif", "Pasif"] },
+        { code: "aciklama", name: "Açıklama", type: "TEXTAREA", required: false, visibility: "EVERYONE" },
+      ],
+      [
+        { id: "ur1", ad: "Kurumsal Yazılım Lisansı (Yıllık)", kod: "URN-001", kategori: "Lisans", birim: "Yıl", birim_fiyat: 48000, kdv: "%20", durum: "Aktif", aciklama: "Yıllık platform aboneliği." },
+        { id: "ur2", ad: "Danışmanlık (Saatlik)", kod: "URN-002", kategori: "Danışmanlık", birim: "Saat", birim_fiyat: 2500, kdv: "%20", durum: "Aktif", aciklama: "" },
+        { id: "ur3", ad: "Mobil Uygulama Geliştirme", kod: "URN-003", kategori: "Hizmet", birim: "Paket", birim_fiyat: 350000, kdv: "%20", durum: "Aktif", aciklama: "Proje bazlı." },
       ],
     ),
     mkTbl("T-0083", "Müvekkiller",

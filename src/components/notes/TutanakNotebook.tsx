@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   Users, MapPin, ClipboardList, Target, Gavel, AlertTriangle, CheckSquare, Square,
   CheckCircle2, Plus, Pencil, Check, ChevronLeft, ChevronRight, Search, X, Trash2,
@@ -39,27 +40,36 @@ const MentionCtx = createContext<MSrc[]>([]);
 function MentionInput({ value, onChange, placeholder, className, style }: { value: string; onChange: (v: string) => void; placeholder?: string; className?: string; style?: CSSProperties }) {
   const sources = useContext(MentionCtx);
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState<string[]>([]);
+  const [allItems, setAllItems] = useState<string[]>([]);
   const [cat, setCat] = useState("");
+  const [filter, setFilter] = useState("");
+  const [rect, setRect] = useState<{ left: number; top: number; width: number } | null>(null);
   const caretRef = useRef(0);
   const ref = useRef<HTMLInputElement>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: MouseEvent) => { if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false); };
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (ref.current && !ref.current.contains(t) && popRef.current && !popRef.current.contains(t)) setOpen(false);
+    };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
 
+  const openFor = (src: MSrc, caret: number) => {
+    setAllItems(src.items()); setCat(src.label); setFilter(""); caretRef.current = caret;
+    const r = ref.current?.getBoundingClientRect();
+    if (r) setRect({ left: r.left, top: r.bottom, width: r.width });
+    setOpen(true);
+  };
   const handle = (v: string, caret: number) => {
     onChange(v);
-    const before = v.slice(0, caret);
-    const m = before.match(/([\p{L}]{3,})$/u);
+    const m = v.slice(0, caret).match(/([\p{L}]{3,})$/u);
     const word = m ? m[1].toLocaleLowerCase("tr") : "";
     const src = word ? sources.find((s) => s.test.test(word)) : undefined;
-    if (src) { const list = src.items().slice(0, 10); setItems(list); setCat(src.label); caretRef.current = caret; setOpen(list.length > 0); }
-    else setOpen(false);
+    if (src) openFor(src, caret); else setOpen(false);
   };
   const pick = (label: string) => {
     const caret = caretRef.current;
@@ -68,19 +78,27 @@ function MentionInput({ value, onChange, placeholder, className, style }: { valu
     onChange(nv); setOpen(false);
     requestAnimationFrame(() => { ref.current?.focus(); const p = before.length; ref.current?.setSelectionRange(p, p); });
   };
+  const fq = filter.trim().toLocaleLowerCase("tr");
+  const shown = (fq ? allItems.filter((it) => it.toLocaleLowerCase("tr").includes(fq)) : allItems).slice(0, 50);
+
   return (
-    <div ref={wrapRef} className="relative min-w-0 flex-1">
+    <div className="relative min-w-0 flex-1">
       <input ref={ref} value={value} placeholder={placeholder}
         onChange={(e) => handle(e.target.value, e.target.selectionStart ?? e.target.value.length)}
         onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
         className={className} style={style} />
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 max-h-56 w-full min-w-[240px] overflow-y-auto rounded-lg border border-line bg-panel p-1 font-sans shadow-card">
-          <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-faint">{cat} — seç</p>
-          {items.map((it, i) => (
+      {open && rect && createPortal(
+        <div ref={popRef} className="fixed z-[100] max-h-72 overflow-y-auto rounded-lg border border-line bg-panel p-1 font-sans shadow-card" style={{ left: rect.left, top: rect.top + 4, width: Math.max(rect.width, 250) }}>
+          <div className="flex items-center gap-2 px-1.5 pb-1 pt-0.5"><span className="text-[10px] font-semibold uppercase tracking-wide text-faint">{cat} — seç</span><span className="ml-auto text-[10px] text-faint">{shown.length}</span></div>
+          {allItems.length > 6 && (
+            <input autoFocus value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Ara…" className="mb-1 w-full rounded border border-line bg-base/60 px-2 py-1 text-[12px] text-ink outline-none focus:border-neon-blue" />
+          )}
+          {shown.map((it, i) => (
             <button key={i} type="button" onMouseDown={(e) => { e.preventDefault(); pick(it); }} className="block w-full truncate rounded px-2 py-1 text-left text-[13px] text-ink transition hover:bg-elevated">{it}</button>
           ))}
-        </div>
+          {shown.length === 0 && <p className="px-2 py-3 text-center text-[12px] text-faint">{allItems.length === 0 ? "Bu türde kayıt yok" : "Eşleşen yok"}</p>}
+        </div>,
+        document.body,
       )}
     </div>
   );
@@ -118,8 +136,12 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
   const muvekkiller = (getModule("mod-T-0083")?.records ?? []) as DynamicRecord[];
   const davalar = (getModule("mod-T-0016")?.records ?? []) as DynamicRecord[];
   const gorevler = (getModule("mod-T-0056")?.records ?? []) as DynamicRecord[];
+  const urunler = (getModule("mod-T-0085")?.records ?? []) as DynamicRecord[];
+  const kasalar = (getModule("mod-T-0006")?.records ?? []) as DynamicRecord[];
+  const sozlesmeler = (getModule("mod-T-0073")?.records ?? []) as DynamicRecord[];
+  const notlar = (getModule("mod-T-0068")?.records ?? []) as DynamicRecord[];
   const [saved, setSaved] = useState(false);
-  // Metin içinde yazarken öneri kaynakları: yazılan kelimeye göre liste açılır (proje/kullanıcı/avukat/müvekkil/cari/dosya/görev…). Yeni kaynak eklemek için diziye satır ekleyin.
+  // Metin içinde yazarken öneri kaynakları: yazılan kelimeye göre liste açılır. Yeni kaynak eklemek için diziye satır ekleyin.
   const mentionSources: MSrc[] = useMemo(() => [
     { test: /proje/, label: "Projeler", items: () => projects.map((p) => `${p.code} · ${p.name}`) },
     { test: /kullanıc|kişi|katılımc|personel|sorumlu/, label: "Kullanıcılar", items: () => users.filter((u) => u.active).map((u) => u.name) },
@@ -128,7 +150,11 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
     { test: /müvekkil|muvekkil/, label: "Müvekkiller", items: () => muvekkiller.map((m) => String(m.ad)).filter(Boolean) },
     { test: /dosya|dava|icra/, label: "Dava / Dosya", items: () => davalar.map((d) => `${d.dosya_no} · ${d.dosya_konusu}`) },
     { test: /görev|gorev/, label: "Görevler", items: () => gorevler.map((g) => String(g.baslik)).filter(Boolean) },
-  ], [projects, users, avukatlar, muvekkiller, davalar, gorevler]);
+    { test: /ürün|urun|hizmet|mal\b/, label: "Ürün / Hizmet", items: () => urunler.map((u) => `${u.ad}${u.kod ? ` (${u.kod})` : ""}`) },
+    { test: /kasa|banka|hesap/, label: "Kasa / Hesap", items: () => kasalar.map((k) => String(k.ad)).filter(Boolean) },
+    { test: /sözleşme|sozlesme|kira/, label: "Sözleşmeler", items: () => sozlesmeler.map((s) => String(s.sozlesme_no || s.daire)).filter(Boolean) },
+    { test: /^not/, label: "Notlar", items: () => notlar.map((n) => String(n.baslik)).filter(Boolean) },
+  ], [projects, users, avukatlar, muvekkiller, davalar, gorevler, urunler, kasalar, sozlesmeler, notlar]);
   const [selId, setSelId] = useState<string | null>(recs[0] ? String(recs[0].id) : null);
   const [edit, setEdit] = useState(false);
   const [q, setQ] = useState("");
