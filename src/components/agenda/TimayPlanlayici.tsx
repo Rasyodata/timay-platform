@@ -25,6 +25,7 @@ const TIP: Record<string, { renk: string; kisa: string }> = {
   "Etkinlik": { renk: "#0d9488", kisa: "ETKİNLİK" },
   "Not": { renk: "#CA8A04", kisa: "NOT" },
   "Tutanak": { renk: "#7C3AED", kisa: "TUTANAK" },
+  "İstek": { renk: "#C1292E", kisa: "İSTEK" },
 };
 
 // Hızlı İşlemler — ilgili tabloya yerinde kayıt açar (sağ panelde; deftere sürüklenebilir)
@@ -39,7 +40,7 @@ const SEKMELER: { label: string; renk: string; addMod: string; defaults?: Record
   { label: "Tutanak", renk: "#5B8DB8", addMod: "mod-T-0063" },
   { label: "İlaç", renk: "#9333EA", addMod: "mod-T-0057", defaults: { baslik: "İlaç — " } },
   { label: "Dosya", renk: "#D9B44A", addMod: "mod-T-0067" },
-  { label: "Talep", renk: "#B5731A", addMod: "TALEP" },
+  { label: "İstek", renk: "#B5731A", addMod: "TALEP" },
 ];
 
 export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View) => void }) {
@@ -71,6 +72,7 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
     ...recs("mod-T-0060").filter((r) => String(r.tarih) === curStr).map((r) => ({ id: "e" + r.id, modId: "mod-T-0060", rec: r, tip: "Etkinlik", title: String(r.baslik), time: String(r.baslangic_saat || "") })),
     ...recs("mod-T-0068").filter((r) => r.arsiv !== true && String(r.tarih) === curStr).map((r) => ({ id: "n" + r.id, modId: "mod-T-0068", rec: r, tip: "Not", title: String(r.baslik || r.icerik || ""), time: "" })),
     ...recs("mod-T-0063").filter((r) => String(r.tarih) === curStr).map((r) => ({ id: "t" + r.id, modId: "mod-T-0063", rec: r, tip: "Tutanak", title: String(r.toplanti || ""), time: String(r.saat || "") })),
+    ...recs("mod-T-0076").filter((r) => String(r.tarih) === curStr).map((r) => ({ id: "q" + r.id, modId: "mod-T-0076", rec: r, tip: "İstek", title: String(r.konu || ""), time: "" })),
   ].sort((a, b) => a.time.localeCompare(b.time));
 
   const nav = (d: number) => setCur((c) => c + d * ONE);

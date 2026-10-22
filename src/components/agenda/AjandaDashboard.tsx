@@ -26,7 +26,7 @@ const TIP_META: Record<string, { renk: string; kisa: string }> = {
   "Görev": { renk: "#1E7A46", kisa: "GÖREV" },
   "Not": { renk: "#CA8A04", kisa: "NOT" },
   "Onay": { renk: "#B5731A", kisa: "ONAY" },
-  "Talep": { renk: "#C1292E", kisa: "TALEP" },
+  "Talep": { renk: "#C1292E", kisa: "İSTEK" },
   "Tutanak": { renk: "#7C3AED", kisa: "TUTANAK" },
 };
 
@@ -166,7 +166,7 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
           { label: "Not Ekle", icon: FileText, kind: "not" },
           { label: "Hatırlatma", icon: BellRing, kind: "hatirlatma" },
           { label: "Dosya Ekle", icon: Folder, kind: "dosya" },
-          { label: "Talep Ekle", icon: AlertCircle, kind: "talep" },
+          { label: "İstek Ekle", icon: AlertCircle, kind: "talep" },
           { label: "Tutanak", icon: Bell, kind: "tutanak" },
         ].map((a) => (
           <button key={a.label} onClick={() => openKind(a.kind)}
