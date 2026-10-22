@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import {
   Plus, Search, X, Trash2, StickyNote, Tag, Calendar, Bell, BellOff,
-  Archive, ArchiveRestore, Flag, Save,
+  Archive, ArchiveRestore, Flag, Save, MessageSquare,
 } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
+import MesajGonderModal from "@/components/messaging/MesajGonderModal";
 import MentionTextarea from "@/components/common/MentionTextarea";
 import type { DynamicRecord } from "@/types/modules";
 import type { View } from "@/App";
@@ -39,6 +40,7 @@ export default function NotesPage(_props: { onNavigate?: (v: View) => void }) {
   const [dateEditId, setDateEditId] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const [msgModal, setMsgModal] = useState<{ baslik: string; icerik: string } | null>(null);
 
   const mod = getModule(MOD);
   const records = (mod?.records ?? []) as DynamicRecord[];
@@ -144,6 +146,7 @@ export default function NotesPage(_props: { onNavigate?: (v: View) => void }) {
                           <button onClick={() => setEditor(r)} className="text-left text-[15px] font-bold leading-tight text-ink">{String(r.baslik)}</button>
                         </div>
                         <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+                          <button onClick={() => setMsgModal({ baslik: String(r.baslik), icerik: String(r.icerik ?? "") })} title="Mesaj olarak gönder" className="grid h-6 w-6 place-items-center rounded text-ink/50 hover:bg-black/10 hover:text-neon-blue"><MessageSquare size={13} /></button>
                           <button onClick={() => toggleArsiv(r)} title={r.arsiv ? "Arşivden çıkar" : "Arşivle"} className="grid h-6 w-6 place-items-center rounded text-ink/50 hover:bg-black/10 hover:text-ink">
                             {r.arsiv ? <ArchiveRestore size={13} /> : <Archive size={13} />}
                           </button>
@@ -203,6 +206,7 @@ export default function NotesPage(_props: { onNavigate?: (v: View) => void }) {
       {editor && <NoteEditor initial={editor === "new" ? null : editor} onClose={() => setEditor(null)}
         onSave={(data, id) => { if (id) updateRecord(MOD, id, data); else addRecord(MOD, data); setEditor(null); }}
         onDelete={editor !== "new" ? (id) => { deleteRecord(MOD, id); setEditor(null); } : undefined} />}
+      {msgModal && <MesajGonderModal baslik={msgModal.baslik} icerik={msgModal.icerik} onClose={() => setMsgModal(null)} />}
     </div>
   );
 }

@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Printer, Plus, X, AlertCircle, FileText, CheckSquare, Bell, BellRing, Sun, Folder, Search, TrendingUp, BookOpen, Send, Trash2, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Printer, Plus, X, AlertCircle, FileText, CheckSquare, Bell, BellRing, Sun, Folder, Search, TrendingUp, BookOpen, Send, Trash2, CheckCircle2, MessageSquare } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
 import { RecordForm } from "@/components/projects/ProjectTableCard";
 import TalepForm from "@/components/requests/TalepForm";
 import HatirlatmaModal from "@/components/agenda/HatirlatmaModal";
+import MesajGonderModal from "@/components/messaging/MesajGonderModal";
 import type { DynamicRecord, DynamicModule } from "@/types/modules";
 import type { View } from "@/App";
 
@@ -36,6 +37,7 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
   const [modal, setModal] = useState<{ mod: DynamicModule; rec: DynamicRecord | "new"; defaults?: Record<string, unknown> } | null>(null);
   const [talepModal, setTalepModal] = useState(false);
   const [hatirlatma, setHatirlatma] = useState<{ date?: string } | null>(null);
+  const [msgModal, setMsgModal] = useState<{ baslik: string; icerik: string } | null>(null);
   const [q, setQ] = useState("");
   // Deftere hızlı not
   const [noteText, setNoteText] = useState("");
@@ -301,6 +303,7 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
                     <span className="flex-1 truncate text-[14px] text-ink">{e.title}</span>
                   </button>
                   <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+                    <button onClick={() => setMsgModal({ baslik: `${TIP_META[e.tip]?.kisa || e.tip} · ${dmy(e.date)}`, icerik: e.title })} title="Mesaj olarak gönder" className="grid h-7 w-7 place-items-center rounded-lg text-faint transition hover:bg-neon-blue/10 hover:text-neon-blue"><MessageSquare size={15} /></button>
                     <button onClick={() => onayaGonder(e)} title="Onaya gönder" className="grid h-7 w-7 place-items-center rounded-lg text-faint transition hover:bg-neon-blue/10 hover:text-neon-blue"><CheckCircle2 size={15} /></button>
                     <button onClick={() => silDefter(e)} title="Sil" className="grid h-7 w-7 place-items-center rounded-lg text-faint transition hover:bg-critical/10 hover:text-critical"><Trash2 size={15} /></button>
                   </div>
@@ -412,6 +415,7 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
       )}
 
       {hatirlatma && <HatirlatmaModal defaultDate={hatirlatma.date} onClose={() => setHatirlatma(null)} />}
+      {msgModal && <MesajGonderModal baslik={msgModal.baslik} icerik={msgModal.icerik} onClose={() => setMsgModal(null)} />}
     </div>
   );
 }

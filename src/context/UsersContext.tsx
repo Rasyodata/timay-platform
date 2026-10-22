@@ -19,7 +19,7 @@ import {
 } from "@/types/users";
 import type { Visibility } from "@/types/modules";
 
-const STORAGE_KEY = "timay.users.v12";
+const STORAGE_KEY = "timay.users.v13";
 let counter = 0;
 const uid = (p: string) => `${p}-${Date.now().toString(36)}-${(counter++).toString(36)}`;
 
@@ -53,6 +53,7 @@ function seed(): Persisted {
     users: [
       { id: "u-9", kod: "K-0001", name: "Rasyodata", email: "rasyodatagrup@gmail.com", phone: "", department: "Yönetim", userType: "Yönetici", adres: { sokak: "", mahalle: "", ilce: "", il: "" }, vergiDairesi: "", vergiNo: "", tcNo: "", role: "owner", active: true, password: "15045904" },
       { id: "u-10", kod: "K-0002", name: "Tuğba Yörük", email: "", phone: "", department: "Yönetim", userType: "Yönetici", adres: { sokak: "", mahalle: "", ilce: "", il: "" }, vergiDairesi: "", vergiNo: "", tcNo: "", role: "manager", active: true, password: "" },
+      { id: "u-11", kod: "K-0003", name: "Kadir Fırat", email: "", phone: "", department: "Pazarlama", userType: "Personel", adres: { sokak: "", mahalle: "", ilce: "", il: "" }, vergiDairesi: "", vergiNo: "", tcNo: "", role: "contributor", active: true, password: "" },
     ],
     caps: structuredCaps(),
     inheritance: [],
