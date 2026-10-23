@@ -12,7 +12,7 @@ import HatirlatmaModal from "@/components/agenda/HatirlatmaModal";
 import type { DynamicRecord } from "@/types/modules";
 import type { View } from "@/App";
 
-const HAND = "'Patrick Hand', 'Comic Sans MS', ui-rounded, cursive";
+const HAND = "inherit"; // Takvim ile aynı font (sans) — el yazısı kaldırıldı
 const TR_AY = ["OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN", "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"];
 const TR_AY_K = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 const TR_GUN_UZUN = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
@@ -153,7 +153,7 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
         {/* Ana alan — büyük defter (çok not için) */}
-        <div className="min-w-0 flex-1 space-y-3 rounded-xl p-5 shadow-[0_12px_34px_rgba(0,0,0,0.2)]" style={{ background: "#FBF7EC", border: "1px solid #E7DFC9" }}>
+        <div className="min-w-0 flex-1 space-y-3 rounded-xl p-5 shadow-card" style={{ background: "#FFFFFF", border: "1px solid #D6DDE6" }}>
           {/* Başlık — büyük tarih + mini ay */}
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-start gap-3">
@@ -248,7 +248,7 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
         </Card>
         <Card title="RUH HALİ" icon={Smile} renk="#E7E1F3">
           <div className="flex items-center justify-center gap-3">{[Smile, Meh, Frown].map((Ic, i) => <button key={i} onClick={() => setRuh(i)} className={i === ruh ? "text-good" : "text-ink/30"}><Ic size={26} /></button>)}</div>
-          <p className="mt-1 text-center text-ink/70" style={{ fontFamily: "'Caveat', cursive", fontSize: 15 }}>{["Verimli bir gün", "Normal bir gün", "Zorlu bir gün"][ruh]}</p>
+          <p className="mt-1 text-center text-[12px] text-ink/70">{["Verimli bir gün", "Normal bir gün", "Zorlu bir gün"][ruh]}</p>
         </Card>
         <Card title="İLAÇ TAKİBİ" icon={Pill} renk="#EDE4FB">
           <div className="space-y-0.5">

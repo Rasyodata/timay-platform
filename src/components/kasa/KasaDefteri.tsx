@@ -320,7 +320,7 @@ export default function KasaDefteri() {
 
       <div className="flex flex-col gap-4 lg:flex-row">
         {/* Tek sayfa defter */}
-        <div className="min-w-0 flex-1 overflow-hidden rounded-xl border border-black/10 shadow-[0_8px_24px_rgba(0,0,0,0.12)]" style={{ background: "#FBF7EC" }}>
+        <div className="min-w-0 flex-1 overflow-hidden rounded-xl border border-line shadow-card" style={{ background: "#FFFFFF" }}>
           <div className="flex items-center justify-between gap-2 border-b border-black/10 bg-black/[0.03] px-3 py-2">
             <div className="flex items-center gap-2 text-[12px]" title="Önceki günlerin hareketlerinden otomatik hesaplanır — elle değiştirilemez; düzeltmek için ilgili hareketi düzeltin">
               <span className="font-semibold text-amber-800">Dünden Devir</span>
@@ -399,15 +399,15 @@ export default function KasaDefteri() {
 
         {/* Sağ: Hızlı İşlemler */}
         <div className="w-full shrink-0 lg:order-first lg:w-56">
-          <div className="rounded-xl border border-black/10 bg-white/70 p-3">
-            <p className="mb-1 flex items-center gap-1.5 text-[12px] font-bold tracking-wide text-ink"><Plus size={13} className="text-neon-blue" /> HIZLI İŞLEMLER</p>
-            <p className="mb-2.5 text-[11px] text-ink/50">Tıkla ya da <b className="text-ink/70">tabloya sürükle</b> — tutar girince ilgili tabloya da işlenir.</p>
+          <div className="card p-4">
+            <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-ink"><Plus size={14} className="text-neon-blue" /> Hızlı İşlemler</h2>
+            <p className="mb-2.5 text-[11px] text-muted">Tıkla ya da <b className="text-ink">tabloya sürükle</b> — tutar girince ilgili tabloya da işlenir.</p>
             <div className="grid grid-cols-1 gap-1.5">
               {QUICK.map((q) => (
                 <button key={q.label}
                   draggable onDragStart={() => setDragAct(q)} onDragEnd={() => setDragAct(null)}
                   onClick={() => addQuick(q)}
-                  className={`flex cursor-grab items-center gap-2 rounded-xl border border-black/10 bg-white/60 px-2.5 py-2 text-left text-xs font-medium text-ink transition hover:-translate-y-0.5 hover:border-neon-blue/40 active:cursor-grabbing ${dragAct?.label === q.label ? "opacity-40" : ""}`}
+                  className={`flex cursor-grab items-center gap-2 rounded-xl border border-line bg-base/40 px-2.5 py-2 text-left text-xs font-medium text-ink transition hover:-translate-y-0.5 hover:border-neon-blue/40 active:cursor-grabbing ${dragAct?.label === q.label ? "opacity-40" : ""}`}
                   title={`${q.yon} · ${q.tur}`}>
                   <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg" style={{ background: q.yon === "Giren" ? "#1E7A4622" : "#C1292E22", color: q.yon === "Giren" ? "#1E7A46" : "#C1292E" }}>{q.yon === "Giren" ? <ArrowDownLeft size={14} /> : <ArrowUpRight size={14} />}</span> {q.label}
                 </button>

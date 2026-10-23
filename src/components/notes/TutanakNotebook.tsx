@@ -15,7 +15,7 @@ import { useDefterHareketi } from "@/hooks/useDefterHareketi";
 import MesajGonderModal from "@/components/messaging/MesajGonderModal";
 
 const MOD = "mod-T-0063";
-const HAND = "'Patrick Hand', 'Comic Sans MS', ui-rounded, cursive";
+const HAND = "inherit"; // Takvim ile aynı font (sans) — el yazısı kaldırıldı
 const TR_AY = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 const TR_GUN = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
 const DURUM_SEC = ["Bekliyor", "Planlandı", "Devam Ediyor", "Tamamlandı", "İptal"];
@@ -430,14 +430,14 @@ export default function TutanakNotebook({ onNavigate }: { onNavigate?: (v: View)
           onDragOver={dragSec ? (e) => e.preventDefault() : undefined}
           onDrop={dragSec ? (e) => { e.preventDefault(); quickAdd(dragSec); setDragSec(null); } : undefined}
           className={`relative min-w-0 flex-1 overflow-hidden rounded-l-xl rounded-r-sm text-ink shadow-[0_10px_30px_rgba(0,0,0,0.18)] transition ${dragSec ? "ring-4 ring-neon-blue/50" : ""} ${!edit ? "cursor-text" : ""}`}
-          style={{ fontFamily: HAND, background: "#FFFDF4", backgroundImage: "repeating-linear-gradient(#FFFDF4 0 30px, #DCE6EF 30px 31px)", border: "1px solid #E7E0CC" }}>
+          style={{ fontFamily: HAND, background: "#FFFFFF", backgroundImage: "repeating-linear-gradient(#FFFFFF 0 30px, #DCE6EF 30px 31px)", border: "1px solid #D6DDE6" }}>
           <div className="grid gap-0 lg:grid-cols-2">
             {/* ── SOL SAYFA ── */}
             <div className="relative border-b border-dashed border-[#E3DCC6] p-6 pl-10 lg:border-b-0 lg:border-r">
               <div className="pointer-events-none absolute inset-y-0 left-7 w-px bg-[#F0A6A6]" />
 
               <div className="mb-3 flex items-start justify-between gap-3">
-                <h2 className="text-[34px] font-bold leading-none" style={{ fontFamily: "'Caveat', cursive" }}>
+                <h2 className="text-xl font-bold leading-none">
                   <span className="rounded px-1" style={{ background: "#FBCFE8", textDecoration: "underline", textDecorationColor: "#DB2777" }}>Toplantı Notları</span>
                 </h2>
                 <div className="text-right text-[16px] leading-tight text-ink/80">
