@@ -10,7 +10,10 @@ import {
 import type { AuditCategory, AuditEntry } from "@/types/audit";
 
 const STORAGE_KEY = "timay.audit.v1";
-const ACTOR = "Şevket Kaan";
+// Aktif kullanıcı (aktör) — UsersProvider dışarıda olduğu için modül seviyesinde köprülenir.
+let currentActor = "Rasyodata";
+export function setAuditActor(name: string) { currentActor = name && name.trim() ? name.trim() : "Sistem"; }
+const ACTOR = "Rasyodata";
 
 let counter = 0;
 const uid = () => `a-${Date.now().toString(36)}-${(counter++).toString(36)}`;
@@ -61,7 +64,7 @@ export function AuditProvider({ children }: { children: ReactNode }) {
 
   const log = useCallback((input: LogInput) => {
     setEntries((prev) => [
-      { id: uid(), at: new Date().toISOString(), actor: ACTOR, ...input },
+      { id: uid(), at: new Date().toISOString(), actor: currentActor, ...input },
       ...prev,
     ].slice(0, 500));
   }, []);

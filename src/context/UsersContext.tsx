@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useAudit } from "@/context/AuditContext";
+import { useAudit, setAuditActor } from "@/context/AuditContext";
 import { ROLE_LABELS, type RoleKey } from "@/types/modules";
 import {
   CAPABILITY_LABELS,
@@ -146,6 +146,9 @@ export function UsersProvider({ children }: { children: ReactNode }) {
     () => state.users.find((u) => u.id === state.currentUserId) ?? state.users[0],
     [state.users, state.currentUserId],
   );
+
+  // Denetim kayıtlarının aktörü = aktif kullanıcı
+  useEffect(() => { setAuditActor(currentUser.name); }, [currentUser.name]);
 
   const can = useCallback(
     (cap: Capability) => Boolean(state.caps[currentUser.role]?.[cap]),
