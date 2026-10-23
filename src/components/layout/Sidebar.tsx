@@ -2,6 +2,7 @@ import { ChevronLeft, Printer, Settings } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { View } from "@/App";
 import { WORKSPACES } from "@/lib/nav";
+import { useAllowedWorkspaces } from "@/hooks/useAccess";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -14,6 +15,8 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose, activeWs, onSelectWorkspace, onNavigate }: SidebarProps) {
+  const allowed = useAllowedWorkspaces();
+  const visibleWs = WORKSPACES.filter((w) => allowed.has(w.key));
   const Item = ({ icon: Icon, label, onClick, active, title }: { icon: LucideIcon; label: string; onClick: () => void; active?: boolean; title?: string }) => (
     <button
       onClick={onClick}
@@ -46,14 +49,14 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
 
         {/* Çalışma alanları */}
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {WORKSPACES.map((ws) => (
+          {visibleWs.map((ws) => (
             <Item key={ws.key} icon={ws.icon} label={ws.label} onClick={() => onSelectWorkspace(ws.key)} active={activeWs === ws.key} />
           ))}
         </nav>
 
         {/* Alt: Ayarlar + Yazdır + Daralt */}
         <div className="space-y-1 border-t border-white/10 p-3">
-          <Item icon={Settings} label="Ayarlar" onClick={() => onNavigate("record-add")} title="Ayarlar" />
+          {allowed.has("ayarlar") && <Item icon={Settings} label="Ayarlar" onClick={() => onNavigate("record-add")} title="Ayarlar" />}
           <button onClick={() => window.print()} title="Yazdır" className={`no-print flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white ${collapsed ? "justify-center" : ""}`}>
             <Printer size={18} />{!collapsed && <span>Yazdır</span>}
           </button>

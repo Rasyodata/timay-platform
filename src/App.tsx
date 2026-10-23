@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import LoginScreen from "@/components/auth/LoginScreen";
 import Dashboard from "@/components/dashboard/Dashboard";
 import ModuleBuilder from "@/components/modules/ModuleBuilder";
@@ -48,6 +48,7 @@ import { ModulesProvider } from "@/context/ModulesContext";
 import { ProjectsProvider } from "@/context/ProjectsContext";
 import { UsersProvider } from "@/context/UsersContext";
 import { WORKSPACES, workspaceForView } from "@/lib/nav";
+import { useAllowedWorkspaces } from "@/hooks/useAccess";
 
 /** Basit görünüm yönlendirmesi. */
 export type View =
@@ -98,6 +99,18 @@ function DashboardShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [view, setView] = useState<View>("ajandam");
   const [activeWs, setActiveWs] = useState("buro");
+  const allowedWs = useAllowedWorkspaces();
+
+  // Yetkisiz çalışma alanındaysa ilk izinli alana yönlendir (kullanıcı değişince de)
+  useEffect(() => {
+    const vw = workspaceForView(view);
+    const wsOk = allowedWs.has(activeWs) && (!vw || allowedWs.has(vw));
+    if (!wsOk) {
+      const first = WORKSPACES.find((w) => allowedWs.has(w.key)) ?? WORKSPACES[0];
+      setActiveWs(first.key);
+      setView(first.defaultView);
+    }
+  }, [allowedWs, activeWs, view]);
 
   // İçerik navigasyonu — görünümün ait olduğu çalışma alanını türetir (belirsizse korur).
   const navigate = (v: View) => {
