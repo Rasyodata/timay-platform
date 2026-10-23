@@ -12,7 +12,6 @@ import { useModules } from "@/context/ModulesContext";
 import { useProjects } from "@/context/ProjectsContext";
 import { ROLE_LABELS } from "@/types/modules";
 import { WORKSPACES } from "@/lib/nav";
-import { useAccess } from "@/hooks/useAccess";
 import type { View } from "@/App";
 
 interface NavbarProps {
@@ -256,7 +255,6 @@ export default function Navbar({ onMenu, onNavigate, view, activeWs }: NavbarPro
   const { live, toggleLive } = useDashboard();
   const { getModule } = useModules();
   const { currentUser } = useUsers();
-  const access = useAccess();
   const unreadMsgList = (getModule("mod-T-0087")?.records ?? []).filter((r) => { const m = r as Record<string, unknown>; return m.alici === currentUser.name && !m.okundu; }).sort((a, b) => String((b as Record<string, unknown>).tarih).localeCompare(String((a as Record<string, unknown>).tarih)));
   const unreadMsg = unreadMsgList.length;
   const [notifOpen, setNotifOpen] = useState(false);
@@ -267,14 +265,10 @@ export default function Navbar({ onMenu, onNavigate, view, activeWs }: NavbarPro
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
 
-  const openTasks = (getModule("mod-T-0056")?.records ?? []).filter((r) => String((r as Record<string, unknown>).durum) !== "Tamamlandı").length;
-  const pendingAppr = (getModule("mod-T-0045")?.records ?? []).filter((r) => /bekliyor|incelemede/i.test(String((r as Record<string, unknown>).durum ?? ""))).length;
-  const badgeFor = (v: View): number | undefined => (v === "gorev-yonetimi" ? openTasks : v === "onaylar" ? pendingAppr : undefined);
-
+  // Üst barda sekmeler yok (sol barda kategoriler olarak var) — yalnız başlık.
   const ws = WORKSPACES.find((w) => w.key === activeWs) ?? WORKSPACES[0];
-  const TABS = ws.tabs
-    .filter((t) => access.canSeeTab(ws.key, String(t.view)))
-    .map((t) => ({ icon: t.icon, label: t.label, view: t.view, kod: t.kod, badge: badgeFor(t.view), active: t.match ? t.match(view) : t.view === view }));
+  const activeTab = ws.tabs.find((t) => (t.match ? t.match(view) : t.view === view));
+  const onPlatform = view === "buro-merkezi";
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-base/80 px-4 backdrop-blur-xl md:px-6">
@@ -282,25 +276,15 @@ export default function Navbar({ onMenu, onNavigate, view, activeWs }: NavbarPro
         <Menu size={18} />
       </button>
 
-      {/* Ana gezinme sekmeleri (üst bar) */}
-      <nav className="flex min-w-0 items-center gap-0.5 overflow-x-auto xl:gap-1">
-        {TABS.map((t) => (
-          <button
-            key={t.label}
-            onClick={() => onNavigate(t.view)}
-            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium transition xl:px-3 ${
-              t.active ? "bg-neon-blue/15 text-ink shadow-[inset_0_0_0_1px_rgba(59,130,246,0.3)]" : "text-muted hover:bg-elevated hover:text-ink"
-            }`}
-          >
-            <t.icon size={15} className="shrink-0" />
-            <span className="whitespace-nowrap">{t.label}</span>
-            {t.badge != null && t.badge > 0 && (
-              <span className="grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold text-white" style={{ background: "#C1292E" }}>{t.badge}</span>
-            )}
-          </button>
-        ))}
+      {/* Üst bar başlığı — aktif modül · sekme (gezinme sol barda) */}
+      <div className="flex min-w-0 items-center gap-2.5">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-neon-blue/10 text-neon-blue"><ws.icon size={17} /></span>
+        <div className="min-w-0 leading-tight">
+          <p className="truncate text-sm font-semibold text-ink">{onPlatform ? "Platform" : (activeTab?.label ?? ws.label)}</p>
+          <p className="truncate text-[11px] text-muted">{onPlatform ? "Timay Platform" : ws.label}</p>
+        </div>
         {activeWs === "dosya" && <DocSearch onNavigate={onNavigate} />}
-      </nav>
+      </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
         <div className="hidden md:block"><GlobalSearch onNavigate={onNavigate} /></div>
