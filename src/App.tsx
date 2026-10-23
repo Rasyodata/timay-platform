@@ -26,6 +26,7 @@ import DosyaKutuphanesi from "@/components/docs/DosyaKutuphanesi";
 import GorevYonetimi from "@/components/tasks/GorevYonetimi";
 import NotesPage from "@/components/notes/NotesPage";
 import TutanakNotebook from "@/components/notes/TutanakNotebook";
+import CalismaDefteri from "@/components/notes/CalismaDefteri";
 import KasaDefteri from "@/components/kasa/KasaDefteri";
 import OnaylarPage from "@/components/approvals/OnaylarPage";
 import TimayAkademi from "@/components/academy/TimayAkademi";
@@ -53,6 +54,7 @@ import { useAccess } from "@/hooks/useAccess";
 /** Basit görünüm yönlendirmesi. */
 export type View =
   | "finans-merkezi"
+  | `muhasebe:${string}`
   | "karar-merkezi"
   | "buro-merkezi"
   | "ajanda"
@@ -62,6 +64,7 @@ export type View =
   | "gorev-yonetimi"
   | "notlar"
   | "tutanak"
+  | "calisma-defteri"
   | "kasa-defteri"
   | "onaylar"
   | "akademi"
@@ -154,6 +157,7 @@ function DashboardShell() {
                 className={`flex-1 overflow-x-hidden${["ajandam", "ajanda", "planlayici", "gorev-yonetimi", "onaylar", "users", "roles", "notlar", "tutanak", "dosya-kutuphanesi"].includes(view) ? " dense-zoom" : ""}`}
               >
                 {view === "finans-merkezi" && <MuhasebeMerkezi onNavigate={navigate} />}
+                {view.startsWith("muhasebe:") && <MuhasebeMerkezi onNavigate={navigate} moduleKey={view.slice(9)} />}
                 {view === "karar-merkezi" && <KararMerkezi onNavigate={navigate} />}
                 {view === "buro-merkezi" && <BuroMerkezi onNavigate={navigate} />}
                 {view === "ajanda" && <AjandaPage onNavigate={navigate} />}
@@ -167,6 +171,7 @@ function DashboardShell() {
                 {view === "gorev-yonetimi" && <GorevYonetimi onNavigate={navigate} />}
                 {view === "notlar" && <NotesPage onNavigate={navigate} />}
                 {view === "tutanak" && <TutanakNotebook onNavigate={navigate} />}
+                {view === "calisma-defteri" && <CalismaDefteri />}
                 {view === "kasa-defteri" && <KasaDefteri />}
                 {view === "onaylar" && <OnaylarPage onNavigate={navigate} />}
                 {view === "akademi" && <TimayAkademi onNavigate={navigate} />}

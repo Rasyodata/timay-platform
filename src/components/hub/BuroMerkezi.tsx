@@ -1,8 +1,10 @@
 import { ChevronRight, LayoutDashboard, BarChart3, Table2, Settings,
-  FolderKanban, Building2, Wallet, Rocket } from "lucide-react";
+  FolderKanban, Building2, Wallet, Rocket, Radio } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
 import { useUsers } from "@/context/UsersContext";
+import { useAudit } from "@/context/AuditContext";
+import { Showcase } from "@/components/auth/LoginScreen";
 import type { View } from "@/App";
 import { useAllowedWorkspaces } from "@/hooks/useAccess";
 
@@ -45,6 +47,10 @@ export default function BuroMerkezi({ onNavigate }: { onNavigate: (v: View) => v
   ];
   const YONETIM_ALANLARI = YONETIM_TUMU.filter((t) => allowed.has(t.ws));
 
+  // Canlı aksiyon akışı — gerçek audit kayıtları (kayan yazı)
+  const { entries } = useAudit();
+  const feed = entries.slice(0, 16);
+
   return (
     <div className="max-w-[1280px] space-y-7 px-4 py-8 md:px-6">
       <header>
@@ -52,6 +58,34 @@ export default function BuroMerkezi({ onNavigate }: { onNavigate: (v: View) => v
         <h1 className="mt-2 text-2xl font-bold text-ink md:text-3xl">Merhaba {me.split(" ")[0]} 👋</h1>
         <p className="mt-2 text-sm text-muted">Çalışma alanına hoş geldin. Günün özeti ve yönetim alanların aşağıda.</p>
       </header>
+
+      <style>{`@keyframes bmMarquee { from { transform:translateX(0) } to { transform:translateX(-50%) } }`}</style>
+
+      {/* Giriş paneli (canlı showcase) — piyasa, portföy, canlı istatistikler */}
+      <div className="hidden overflow-hidden rounded-2xl border border-line bg-base shadow-card lg:block">
+        <Showcase />
+      </div>
+
+      {/* Canlı aksiyon akışı — kayan yazı */}
+      {feed.length > 0 && (
+        <div className="flex items-center gap-3 overflow-hidden rounded-xl border border-line bg-panel px-3 py-2">
+          <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-good/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-good">
+            <Radio size={12} className="animate-pulse" /> Canlı
+          </span>
+          <div className="relative min-w-0 flex-1 overflow-hidden">
+            <div className="flex w-max gap-8 whitespace-nowrap" style={{ animation: "bmMarquee 45s linear infinite" }}>
+              {[...feed, ...feed].map((e, i) => (
+                <span key={e.id + "-" + i} className="flex items-center gap-2 text-xs text-muted">
+                  <span className="h-1 w-1 rounded-full bg-neon-blue" />
+                  <span className="font-semibold text-ink">{e.actor}</span>
+                  <span>{e.action}</span>
+                  {e.target && <span className="text-faint">· {e.target}</span>}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KPI — tıklanabilir */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">

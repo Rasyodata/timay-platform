@@ -33,6 +33,11 @@ import {
   CalendarClock,
   Calculator,
   MessageSquare,
+  Package,
+  ReceiptText,
+  ShoppingCart,
+  Activity,
+  Banknote,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { View } from "@/App";
@@ -52,6 +57,7 @@ export const WORKSPACES: Workspace[] = [
       { icon: ClipboardList, label: "İstekler", view: "talepler", kod: "T-0076" },
       { icon: StickyNote, label: "Notlar", view: "notlar", kod: "T-0068" },
       { icon: NotebookPen, label: "Toplantı Defteri", view: "tutanak", kod: "T-0063" },
+      { icon: BookOpen, label: "Çalışma Defteri", view: "calisma-defteri", kod: "CLS" },
       { icon: Wallet, label: "Kasa Defteri", view: "kasa-defteri", kod: "KASA" },
     ],
   },
@@ -79,6 +85,12 @@ export const WORKSPACES: Workspace[] = [
     key: "finans", label: "Finans Yönetimi", icon: Wallet, defaultView: "finans-merkezi",
     tabs: [
       { icon: Wallet, label: "Muhasebe Merkezi", view: "finans-merkezi", kod: "T-0046" },
+      { icon: Package, label: "Stok", view: "muhasebe:stok", kod: "T-0085" },
+      { icon: ReceiptText, label: "Masraflar", view: "muhasebe:masraf", kod: "T-0008" },
+      { icon: ShoppingCart, label: "Satın Alma", view: "muhasebe:satinalma", kod: "T-0024" },
+      { icon: TrendingUp, label: "Satış", view: "muhasebe:satis", kod: "T-0036" },
+      { icon: Banknote, label: "Finans", view: "muhasebe:finans", kod: "T-0006" },
+      { icon: Activity, label: "Nakit Akış", view: "muhasebe:nakit", kod: "T-0009" },
       { icon: BarChart3, label: "Raporlar", view: "finansal-raporlar", kod: "RPR" },
       { icon: History, label: "Tekrarlayan", view: "tekrarlayan", kod: "T-0015" },
       { icon: TrendingUp, label: "Satış Fırsatları", view: "pipeline", kod: "T-0011" },
