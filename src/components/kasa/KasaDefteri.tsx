@@ -398,7 +398,7 @@ export default function KasaDefteri() {
         </div>
 
         {/* Sağ: Hızlı İşlemler */}
-        <div className="w-full shrink-0 lg:w-56">
+        <div className="w-full shrink-0 lg:order-first lg:w-56">
           <div className="rounded-xl border border-black/10 bg-white/70 p-3">
             <p className="mb-1 flex items-center gap-1.5 text-[12px] font-bold tracking-wide text-ink"><Plus size={13} className="text-neon-blue" /> HIZLI İŞLEMLER</p>
             <p className="mb-2.5 text-[11px] text-ink/50">Tıkla ya da <b className="text-ink/70">tabloya sürükle</b> — tutar girince ilgili tabloya da işlenir.</p>
@@ -407,9 +407,9 @@ export default function KasaDefteri() {
                 <button key={q.label}
                   draggable onDragStart={() => setDragAct(q)} onDragEnd={() => setDragAct(null)}
                   onClick={() => addQuick(q)}
-                  className={`flex cursor-grab items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-left text-[12px] font-semibold transition hover:-translate-y-0.5 active:cursor-grabbing ${q.yon === "Giren" ? "border-good/40 bg-good/5 text-good" : "border-critical/40 bg-critical/5 text-critical"} ${dragAct?.label === q.label ? "opacity-40" : ""}`}
+                  className={`flex cursor-grab items-center gap-2 rounded-xl border border-black/10 bg-white/60 px-2.5 py-2 text-left text-xs font-medium text-ink transition hover:-translate-y-0.5 hover:border-neon-blue/40 active:cursor-grabbing ${dragAct?.label === q.label ? "opacity-40" : ""}`}
                   title={`${q.yon} · ${q.tur}`}>
-                  {q.yon === "Giren" ? <ArrowDownLeft size={12} className="shrink-0" /> : <ArrowUpRight size={12} className="shrink-0" />} {q.label}
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg" style={{ background: q.yon === "Giren" ? "#1E7A4622" : "#C1292E22", color: q.yon === "Giren" ? "#1E7A46" : "#C1292E" }}>{q.yon === "Giren" ? <ArrowDownLeft size={14} /> : <ArrowUpRight size={14} />}</span> {q.label}
                 </button>
               ))}
             </div>

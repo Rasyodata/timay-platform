@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Printer, Plus, X, AlertCircle, FileText, CheckSquare, Bell, BellRing, Sun, Folder, Search, TrendingUp, BookOpen, Send, Trash2, CheckCircle2, MessageSquare } from "lucide-react";
+import { ChevronLeft, ChevronRight, Printer, Plus, X, AlertCircle, FileText, CheckSquare, Bell, BellRing, Sun, Folder, Search, TrendingUp, BookOpen, Send, Trash2, CheckCircle2, MessageSquare, Check } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
+import { useUsers } from "@/context/UsersContext";
 import { RecordForm } from "@/components/projects/ProjectTableCard";
 import TalepForm from "@/components/requests/TalepForm";
 import HatirlatmaModal from "@/components/agenda/HatirlatmaModal";
@@ -28,10 +29,27 @@ const TIP_META: Record<string, { renk: string; kisa: string }> = {
   "Onay": { renk: "#B5731A", kisa: "ONAY" },
   "Talep": { renk: "#C1292E", kisa: "İSTEK" },
   "Tutanak": { renk: "#7C3AED", kisa: "TUTANAK" },
+  "Kasa": { renk: "#0891B2", kisa: "KASA" },
 };
+// Takvim/defter kaynak çeltikleri — hangi türler gösterilsin
+const KAYNAKLAR: { key: string; label: string; tips: string[] }[] = [
+  { key: "Ajanda", label: "Ajanda", tips: ["Ajanda", "Etkinlik"] },
+  { key: "Görevler", label: "Görevler", tips: ["Görev"] },
+  { key: "Onaylar", label: "Onaylar", tips: ["Onay"] },
+  { key: "İstekler", label: "İstekler", tips: ["Talep"] },
+  { key: "Notlar", label: "Notlar", tips: ["Not"] },
+  { key: "Toplantı", label: "Toplantı", tips: ["Tutanak"] },
+  { key: "Kasa", label: "Kasa", tips: ["Kasa"] },
+];
+const TIP_TO_KAYNAK: Record<string, string> = Object.fromEntries(KAYNAKLAR.flatMap((k) => k.tips.map((t) => [t, k.key])));
+const KASA_KEY = "timay.kasa-defteri.v3";
+const kasaTl = (n: number) => (n || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₺";
 
 export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigate: (v: View) => void; projeFilter?: string }) {
   const { getModule, addRecord, deleteRecord } = useModules();
+  const { currentUser } = useUsers();
+  const [kaynaklar, setKaynaklar] = useState<Set<string>>(() => new Set(KAYNAKLAR.map((k) => k.key)));
+  const toggleKaynak = (k: string) => setKaynaklar((prev) => { const n = new Set(prev); if (n.has(k)) n.delete(k); else n.add(k); return n; });
   const [calView, setCalView] = useState<"gun" | "hafta" | "ay" | "liste">("gun");
   const [cur, setCur] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); });
   const [modal, setModal] = useState<{ mod: DynamicModule; rec: DynamicRecord | "new"; defaults?: Record<string, unknown> } | null>(null);
@@ -131,8 +149,22 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
     ...onayRecs.filter((r) => r.tarih).map((r) => ({ key: "o" + r.id, rec: r, mod: onayMod!, date: String(r.tarih), time: "", title: String(r.konu), tip: "Onay", color: TIP_META.Onay.renk })),
     ...talepRecs.filter((r) => r.tarih).map((r) => ({ key: "q" + r.id, rec: r, mod: talepMod!, date: String(r.tarih), time: "", title: String(r.konu), tip: "Talep", color: TIP_META.Talep.renk })),
   ];
-  const onDate = (s: string) => allEntries.filter((e) => e.date === s).sort((a, b) => a.time.localeCompare(b.time));
+  // Kasa hareketleri (kullanıcının kasa defterinden) — çeltik seçiliyse eklenir
+  const kasaEntries = kaynaklar.has("Kasa") ? (() => {
+    try {
+      const all = JSON.parse(localStorage.getItem(KASA_KEY) || "{}");
+      const book = (all[currentUser.id] ?? {}) as Record<string, { entries?: Array<Record<string, unknown>> }>;
+      return Object.entries(book).flatMap(([d, day]) => (day.entries ?? []).filter((r) => Number(r.tutar) > 0).map((r, i) => ({
+        key: "k" + d + i, rec: {} as DynamicRecord, mod: undefined as unknown as DynamicModule, date: d, time: "",
+        title: `${r.yon === "Giren" ? "Giren" : "Çıkan"} · ${String(r.aciklama || r.tur || "Kasa")} · ${kasaTl(Number(r.tutar))}`,
+        tip: "Kasa", color: TIP_META.Kasa.renk,
+      })));
+    } catch { return []; }
+  })() : [];
+  const shownEntries = [...allEntries, ...kasaEntries].filter((e) => kaynaklar.has(TIP_TO_KAYNAK[e.tip] ?? e.tip));
+  const onDate = (s: string) => shownEntries.filter((e) => e.date === s).sort((a, b) => a.time.localeCompare(b.time));
   const defterItems = onDate(curStr);
+  const openEntry = (e: { mod: DynamicModule; rec: DynamicRecord; tip: string }) => { if (e.tip === "Kasa" || !e.mod) onNavigate("kasa-defteri"); else setModal({ mod: e.mod, rec: e.rec }); };
   const weekStart = (() => { const d = new Date(cur); const dow = (d.getDay() + 6) % 7; d.setDate(d.getDate() - dow); d.setHours(0, 0, 0, 0); return d.getTime(); })();
   const weekDays = Array.from({ length: 7 }, (_, i) => new Date(weekStart + i * ONE));
   const monCells: (number | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: dim }, (_, i) => i + 1)];
@@ -141,7 +173,7 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
   // Ara — tüm kayıtlarda (hangi yıl olursa olsun) başlık/tarih araması
   const qn = q.trim().toLocaleLowerCase("tr");
   const hits = qn
-    ? allEntries
+    ? shownEntries
         .filter((e) => e.title.toLocaleLowerCase("tr").includes(qn) || dmy(e.date).includes(qn))
         .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time))
         .slice(0, 40)
@@ -159,23 +191,22 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
     <div className="card p-4">
       <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-ink"><Plus size={14} className="text-neon-blue" /> Hızlı İşlemler</h2>
       <p className="mb-2.5 text-[11px] text-muted">Tıkla ya da <b className="text-ink">{calView === "gun" ? "deftere" : "takvime"} sürükleyip bırak</b> — seçili güne eklenir ve deftere yazılır.</p>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-1.5">
         {[
-          { label: "Görev Ekle", icon: CheckSquare, kind: "gorev" },
-          { label: "Etkinlik Ekle", icon: Sun, kind: "etkinlik" },
-          { label: "Not Ekle", icon: FileText, kind: "not" },
-          { label: "Hatırlatma", icon: BellRing, kind: "hatirlatma" },
-          { label: "Dosya Ekle", icon: Folder, kind: "dosya" },
-          { label: "İstek Ekle", icon: AlertCircle, kind: "talep" },
-          { label: "Tutanak", icon: Bell, kind: "tutanak" },
+          { label: "Görev", icon: CheckSquare, kind: "gorev", bg: "#BBF7D0", bd: "#4ADE80" },
+          { label: "Etkinlik", icon: Sun, kind: "etkinlik", bg: "#CCFBF1", bd: "#2DD4BF" },
+          { label: "Not", icon: FileText, kind: "not", bg: "#FEF08A", bd: "#FACC15" },
+          { label: "Hatırlatma", icon: BellRing, kind: "hatirlatma", bg: "#E9D5FF", bd: "#A78BFA" },
+          { label: "Dosya", icon: Folder, kind: "dosya", bg: "#FDE68A", bd: "#F59E0B" },
+          { label: "İstek", icon: AlertCircle, kind: "talep", bg: "#FECACA", bd: "#F87171" },
+          { label: "Tutanak", icon: Bell, kind: "tutanak", bg: "#DDD6FE", bd: "#8B5CF6" },
         ].map((a) => (
           <button key={a.label} onClick={() => openKind(a.kind)}
             draggable={a.kind !== "tutanak"}
             onDragStart={() => setDragKind(a.kind)}
             onDragEnd={() => { setDragKind(null); setDropDay(null); }}
-            className={`flex items-center gap-2 rounded-xl border border-line bg-base/40 px-3 py-2.5 text-left text-sm font-medium text-ink transition hover:-translate-y-0.5 hover:border-neon-blue/40 hover:text-neon-blue ${a.kind !== "tutanak" ? "cursor-grab active:cursor-grabbing" : ""} ${dragKind === a.kind ? "opacity-40" : ""}`}>
-            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-neon-blue/10 text-neon-blue"><a.icon size={15} /></span>
-            {a.label}
+            className={`flex items-center gap-2 rounded-xl border border-line bg-base/40 px-2.5 py-2 text-left text-xs font-medium text-ink transition hover:-translate-y-0.5 hover:border-neon-blue/40 ${a.kind !== "tutanak" ? "cursor-grab active:cursor-grabbing" : ""} ${dragKind === a.kind ? "opacity-40" : ""}`}>
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg" style={{ background: a.bd + "22", color: a.bd }}><a.icon size={14} /></span> {a.label}
           </button>
         ))}
       </div>
@@ -227,9 +258,19 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
         </div>
       </div>
 
-      {/* Görünüm seçici — piyasa şeridinin üstünde, her görünümde */}
-      <div className="flex items-center">
+      {/* Görünüm seçici + kaynak çeltikleri — seçili türler takvim/defterde gösterilir */}
+      <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-0.5 rounded-xl border border-line bg-base/40 p-0.5"><VBtn v="gun" label="Gün" /><VBtn v="hafta" label="Hafta" /><VBtn v="ay" label="Ay" /><VBtn v="liste" label="Ajanda" /></div>
+        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-line bg-base/40 px-2 py-1">
+          {KAYNAKLAR.map((k) => { const on = kaynaklar.has(k.key); const m = TIP_META[k.tips[0]]; return (
+            <button key={k.key} onClick={() => toggleKaynak(k.key)} title={on ? "Gizle" : "Göster"}
+              className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[12px] font-semibold transition ${on ? "text-white" : "border-line bg-panel text-muted hover:text-ink"}`}
+              style={on ? { background: m.renk, borderColor: m.renk } : undefined}>
+              <span className={`grid h-3.5 w-3.5 place-items-center rounded border ${on ? "border-white/70 bg-white/20" : "border-line"}`}>{on ? <Check size={10} className="text-white" /> : null}</span>
+              {k.label}
+            </button>
+          ); })}
+        </div>
       </div>
 
       {/* Piyasa özeti (CNN Türk tarzı) — Dolar · Euro · Altın · Gümüş · BIST 100 */}
@@ -258,7 +299,9 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
 
       {/* GÜN — büyük Defter (solda) + Hızlı İşlemler (sağda) */}
       {calView === "gun" && (
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+          {/* Sol: Hızlı İşlemler */}
+          <div className="space-y-4 lg:order-first"><HizliIslemler /></div>
           {/* Defter */}
           <section
             onDragOver={dragKind ? (e) => { e.preventDefault(); setDropDay(curStr); } : undefined}
@@ -300,15 +343,15 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
             <div className="mt-3 space-y-1.5">
               {defterItems.map((e) => (
                 <div key={e.key} className="group flex w-full items-center gap-3 rounded-lg border border-line bg-base/40 px-3 py-2.5 transition hover:border-neon-blue/40 hover:bg-elevated">
-                  <button onClick={() => setModal({ mod: e.mod, rec: e.rec })} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                  <button onClick={() => openEntry(e)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                     <span className="w-20 shrink-0 rounded px-1.5 py-0.5 text-center text-[9px] font-bold tracking-wide" style={{ background: `${e.color}1f`, color: e.color }}>{TIP_META[e.tip]?.kisa || e.tip}</span>
                     {e.time ? <span className="w-12 shrink-0 text-xs text-faint nums">{e.time}</span> : <span className="w-12 shrink-0" />}
                     <span className="flex-1 truncate text-[14px] text-ink">{e.title}</span>
                   </button>
                   <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
                     <button onClick={() => setMsgModal({ baslik: `${TIP_META[e.tip]?.kisa || e.tip} · ${dmy(e.date)}`, icerik: e.title })} title="Mesaj olarak gönder" className="grid h-7 w-7 place-items-center rounded-lg text-faint transition hover:bg-neon-blue/10 hover:text-neon-blue"><MessageSquare size={15} /></button>
-                    <button onClick={() => onayaGonder(e)} title="Onaya gönder" className="grid h-7 w-7 place-items-center rounded-lg text-faint transition hover:bg-neon-blue/10 hover:text-neon-blue"><CheckCircle2 size={15} /></button>
-                    <button onClick={() => silDefter(e)} title="Sil" className="grid h-7 w-7 place-items-center rounded-lg text-faint transition hover:bg-critical/10 hover:text-critical"><Trash2 size={15} /></button>
+                    {e.tip !== "Kasa" && <button onClick={() => onayaGonder(e)} title="Onaya gönder" className="grid h-7 w-7 place-items-center rounded-lg text-faint transition hover:bg-neon-blue/10 hover:text-neon-blue"><CheckCircle2 size={15} /></button>}
+                    {e.tip !== "Kasa" && <button onClick={() => silDefter(e)} title="Sil" className="grid h-7 w-7 place-items-center rounded-lg text-faint transition hover:bg-critical/10 hover:text-critical"><Trash2 size={15} /></button>}
                   </div>
                 </div>
               ))}
@@ -334,15 +377,13 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
               <button onClick={saveNote} disabled={!noteText.trim()} className="flex items-center gap-1 rounded-lg bg-neon-blue px-3 py-2 text-sm font-medium text-white transition hover:bg-neon-blue/90 disabled:opacity-40"><Send size={14} /> Ekle</button>
             </div>
           </section>
-
-          {/* Sağ: Hızlı İşlemler */}
-          <div className="space-y-4"><HizliIslemler /></div>
         </div>
       )}
 
-      {/* HAFTA / AY — takvim (solda) + Hızlı İşlemler (sağda) */}
+      {/* HAFTA / AY — Hızlı İşlemler (solda) + takvim (sağda) */}
       {(calView === "hafta" || calView === "ay") && (
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="space-y-4 lg:order-first"><HizliIslemler /></div>
           <section className="card min-w-0 p-6">
             {calView === "hafta" && (
               <div className="grid grid-cols-7 gap-1">
@@ -353,7 +394,7 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
                     onDrop={dragKind ? (e) => { e.preventDefault(); openKind(dragKind, { date: s }); setDragKind(null); setDropDay(null); } : undefined}
                     className={`min-h-[280px] rounded-lg border p-1.5 transition ${dropDay === s && dragKind ? "border-neon-blue ring-2 ring-neon-blue/40 bg-neon-blue/10" : isT ? "border-neon-blue bg-neon-blue/5" : "border-line bg-base/40"}`}>
                     <div className={`mb-2 text-center text-[11px] ${isT ? "font-bold text-neon-blue" : "text-muted"}`}>{TR_GUN[i]} {d.getDate()}</div>
-                    <div className="space-y-1">{items.map((e) => <button key={e.key} onClick={() => setModal({ mod: e.mod, rec: e.rec })} className="block w-full rounded px-1.5 py-1 text-left text-[10px] font-medium" style={{ background: `${e.color}18`, color: e.color }}><span className="mb-0.5 flex items-center gap-1"><span className="rounded px-1 text-[7px] font-bold tracking-wide" style={{ background: e.color, color: "#fff" }}>{TIP_META[e.tip]?.kisa || e.tip}</span>{e.time ? <span className="opacity-70">{e.time}</span> : null}</span><span className="line-clamp-2">{e.title}</span></button>)}</div>
+                    <div className="space-y-1">{items.map((e) => <button key={e.key} onClick={() => openEntry(e)} className="block w-full rounded px-1.5 py-1 text-left text-[10px] font-medium" style={{ background: `${e.color}18`, color: e.color }}><span className="mb-0.5 flex items-center gap-1"><span className="rounded px-1 text-[7px] font-bold tracking-wide" style={{ background: e.color, color: "#fff" }}>{TIP_META[e.tip]?.kisa || e.tip}</span>{e.time ? <span className="opacity-70">{e.time}</span> : null}</span><span className="line-clamp-2">{e.title}</span></button>)}</div>
                   </div>); })}
               </div>
             )}
@@ -374,19 +415,17 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
               </div>
             )}
           </section>
-
-          <div className="space-y-4"><HizliIslemler /></div>
         </div>
       )}
 
       {/* AJANDA (liste) — tüm tarihli kayıtlar */}
       {calView === "liste" && (
         <section className="card p-4"><div className="space-y-3">
-          {Object.entries(allEntries.reduce<Record<string, typeof allEntries>>((acc, e) => { (acc[e.date] = acc[e.date] || []).push(e); return acc; }, {})).sort().map(([date, items]) => (
+          {Object.entries(shownEntries.reduce<Record<string, typeof shownEntries>>((acc, e) => { (acc[e.date] = acc[e.date] || []).push(e); return acc; }, {})).sort().map(([date, items]) => (
             <div key={date} className="flex gap-3">
               <div className={`w-24 shrink-0 pt-1 text-xs font-semibold ${date === td ? "text-neon-blue" : "text-muted"}`}>{dmy(date)}</div>
               <div className="flex-1 space-y-1">{items.sort((a, b) => a.time.localeCompare(b.time)).map((e) => (
-                <button key={e.key} onClick={() => setModal({ mod: e.mod, rec: e.rec })} className="flex w-full items-center gap-2 rounded-lg border border-line bg-base/40 px-3 py-2 text-left transition hover:border-neon-blue/40">
+                <button key={e.key} onClick={() => openEntry(e)} className="flex w-full items-center gap-2 rounded-lg border border-line bg-base/40 px-3 py-2 text-left transition hover:border-neon-blue/40">
                   <span className="w-16 shrink-0 rounded px-1 py-0.5 text-center text-[9px] font-bold tracking-wide" style={{ background: `${e.color}1f`, color: e.color }}>{TIP_META[e.tip]?.kisa || e.tip}</span>{e.time ? <span className="w-12 text-xs text-muted nums">{e.time}</span> : <span className="w-12" />}<span className="flex-1 truncate text-sm text-ink">{e.title}</span>
                 </button>))}</div>
             </div>))}

@@ -108,11 +108,11 @@ export default function NotesPage(_props: { onNavigate?: (v: View) => void }) {
             <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-ink"><Plus size={15} className="text-neon-blue" /> {editRec ? "Notu Düzenle" : "Yeni Not"}</h2>
             <p className="mb-2.5 text-[11px] text-muted">Hızlı başlık seç — form o başlık ve renkle açılır.</p>
             <div className="mb-3 grid grid-cols-2 gap-1.5">
-              {NOT_TURLERI.map((t) => (
-                <button key={t.label} onClick={() => yeniTur(t)} className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-left text-[13px] font-semibold text-ink transition hover:-translate-y-0.5" style={{ background: RENK[t.renk]?.bg, borderColor: RENK[t.renk]?.kenar }}>
-                  <t.icon size={13} className="shrink-0" /> {t.label}
+              {NOT_TURLERI.map((t) => { const c = RENK[t.renk]?.kenar ?? "#64748B"; return (
+                <button key={t.label} onClick={() => yeniTur(t)} className="flex items-center gap-2 rounded-xl border border-line bg-base/40 px-2.5 py-2 text-left text-xs font-medium text-ink transition hover:-translate-y-0.5 hover:border-neon-blue/40">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg" style={{ background: c + "22", color: c }}><t.icon size={14} /></span> {t.label}
                 </button>
-              ))}
+              ); })}
             </div>
             <NoteEditor key={formKey} embedded initial={editRec} presetBaslik={preset?.baslik} presetRenk={preset?.renk}
               onClose={reset} onSave={kaydet} onDelete={editRec ? (id) => { deleteRecord(MOD, id); reset(); } : undefined} />
