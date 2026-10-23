@@ -2,7 +2,9 @@ import { useState, useRef } from "react";
 import {
   CheckSquare, Square, Droplet, Smile, Meh, Frown, Pill, ChevronLeft, ChevronRight,
   Plus, BookOpen, Send, FileText, X, Trash2, CheckCircle2, Check,
+  PenLine, Sun, Users, BellRing, Lightbulb, NotebookPen, Folder, AlertCircle,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
 import { RecordForm } from "@/components/projects/ProjectTableCard";
 import TalepForm from "@/components/requests/TalepForm";
@@ -40,18 +42,18 @@ const KAYNAKLAR: { key: string; label: string; tips: string[] }[] = [
 const TIP_TO_KAYNAK: Record<string, string> = Object.fromEntries(KAYNAKLAR.flatMap((k) => k.tips.map((t) => [t, k.key])));
 
 // Hızlı İşlemler — ilgili tabloya yerinde kayıt açar (sağ panelde; deftere sürüklenebilir)
-const SEKMELER: { label: string; renk: string; addMod: string; defaults?: Record<string, unknown> }[] = [
-  { label: "Yaz", renk: "#2563EB", addMod: "YAZ" },
-  { label: "Görev", renk: "#2E8B74", addMod: "mod-T-0057" },
-  { label: "Etkinlik", renk: "#0d9488", addMod: "mod-T-0060" },
-  { label: "Görüşme", renk: "#0E7490", addMod: "mod-T-0060", defaults: { tur: "Görüşme" } },
-  { label: "Not", renk: "#C96A86", addMod: "mod-T-0068" },
-  { label: "Hatırlatma", renk: "#7C3AED", addMod: "HATIRLATMA" },
-  { label: "Fikir", renk: "#CA8A04", addMod: "mod-T-0066" },
-  { label: "Tutanak", renk: "#5B8DB8", addMod: "mod-T-0063" },
-  { label: "İlaç", renk: "#9333EA", addMod: "mod-T-0057", defaults: { baslik: "İlaç — " } },
-  { label: "Dosya", renk: "#D9B44A", addMod: "mod-T-0067" },
-  { label: "İstek", renk: "#B5731A", addMod: "TALEP" },
+const SEKMELER: { label: string; renk: string; icon: LucideIcon; addMod: string; defaults?: Record<string, unknown> }[] = [
+  { label: "Yaz", renk: "#2563EB", icon: PenLine, addMod: "YAZ" },
+  { label: "Görev", renk: "#2E8B74", icon: CheckSquare, addMod: "mod-T-0057" },
+  { label: "Etkinlik", renk: "#0d9488", icon: Sun, addMod: "mod-T-0060" },
+  { label: "Görüşme", renk: "#0E7490", icon: Users, addMod: "mod-T-0060", defaults: { tur: "Görüşme" } },
+  { label: "Not", renk: "#C96A86", icon: FileText, addMod: "mod-T-0068" },
+  { label: "Hatırlatma", renk: "#7C3AED", icon: BellRing, addMod: "HATIRLATMA" },
+  { label: "Fikir", renk: "#CA8A04", icon: Lightbulb, addMod: "mod-T-0066" },
+  { label: "Tutanak", renk: "#5B8DB8", icon: NotebookPen, addMod: "mod-T-0063" },
+  { label: "İlaç", renk: "#9333EA", icon: Pill, addMod: "mod-T-0057", defaults: { baslik: "İlaç — " } },
+  { label: "Dosya", renk: "#D9B44A", icon: Folder, addMod: "mod-T-0067" },
+  { label: "İstek", renk: "#B5731A", icon: AlertCircle, addMod: "TALEP" },
 ];
 
 export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View) => void }) {
@@ -224,9 +226,8 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
                 <button key={s.label}
                   draggable onDragStart={() => setDragSek(s.label)} onDragEnd={() => setDragSek(null)}
                   onClick={() => addSekme(s)}
-                  className={`flex cursor-grab items-center gap-1.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold text-white shadow-sm transition hover:-translate-y-0.5 active:cursor-grabbing ${dragSek === s.label ? "opacity-40" : ""}`}
-                  style={{ background: s.renk }}>
-                  <Plus size={13} className="shrink-0" /> {s.label}
+                  className={`flex cursor-grab items-center gap-2 rounded-xl border border-line bg-base/40 px-2.5 py-2 text-left text-xs font-medium text-ink transition hover:-translate-y-0.5 hover:border-neon-blue/40 active:cursor-grabbing ${dragSek === s.label ? "opacity-40" : ""}`}>
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg" style={{ background: s.renk + "22", color: s.renk }}><s.icon size={14} /></span> {s.label}
                 </button>
               ))}
             </div>
