@@ -144,6 +144,7 @@ function DashboardShell() {
               mobileOpen={mobileOpen}
               onMobileClose={() => setMobileOpen(false)}
               activeWs={activeWs}
+              view={view}
               onSelectWorkspace={selectWorkspace}
               onNavigate={navigate}
             />

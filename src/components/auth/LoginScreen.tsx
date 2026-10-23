@@ -164,14 +164,14 @@ function HighlightCard({ item }: { item: Highlight }) {
   );
 }
 
-function Showcase() {
+export function Showcase({ screensaver = false }: { screensaver?: boolean } = {}) {
   const portfolio = useTicker(487_120_000);
 
   // Hero value shown in millions of USD, e.g. "496.89 ML DOLAR".
   const usdMillions = (portfolio / 1_000_000).toFixed(2);
 
   return (
-    <div className="relative hidden flex-col justify-between overflow-hidden p-10 lg:flex xl:p-14">
+    <div className={`relative flex-col justify-between overflow-hidden ${screensaver ? "flex h-full w-full p-8 md:p-12" : "hidden p-10 lg:flex xl:p-14"}`}>
       {/* animated background layers */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-neon-blue/25 blur-[120px] animate-drift-slow" />
