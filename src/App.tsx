@@ -15,7 +15,7 @@ import { UsersAdmin, RolesAdmin } from "@/components/admin/UsersRolesAdmin";
 import TableRecordAdd from "@/components/admin/TableRecordAdd";
 import VeritabaniSemasi from "@/components/admin/VeritabaniSemasi";
 import EvrakKayitAdd from "@/components/admin/EvrakKayitAdd";
-import FinansMerkezi from "@/components/hub/FinansMerkezi";
+import MuhasebeMerkezi from "@/components/hub/MuhasebeMerkezi";
 import FinansalRaporlar from "@/components/hub/FinansalRaporlar";
 import KararMerkezi from "@/components/hub/KararMerkezi";
 import BuroMerkezi from "@/components/hub/BuroMerkezi";
@@ -152,7 +152,7 @@ function DashboardShell() {
               <main
                 className={`flex-1 overflow-x-hidden${["ajandam", "ajanda", "planlayici", "gorev-yonetimi", "onaylar", "users", "roles", "notlar", "tutanak", "dosya-kutuphanesi"].includes(view) ? " dense-zoom" : ""}`}
               >
-                {view === "finans-merkezi" && <FinansMerkezi onNavigate={navigate} />}
+                {view === "finans-merkezi" && <MuhasebeMerkezi onNavigate={navigate} />}
                 {view === "karar-merkezi" && <KararMerkezi onNavigate={navigate} />}
                 {view === "buro-merkezi" && <BuroMerkezi onNavigate={navigate} />}
                 {view === "ajanda" && <AjandaPage onNavigate={navigate} />}

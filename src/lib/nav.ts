@@ -78,7 +78,7 @@ export const WORKSPACES: Workspace[] = [
   {
     key: "finans", label: "Finans Yönetimi", icon: Wallet, defaultView: "finans-merkezi",
     tabs: [
-      { icon: Wallet, label: "Finans Merkezi", view: "finans-merkezi", kod: "T-0046" },
+      { icon: Wallet, label: "Muhasebe Merkezi", view: "finans-merkezi", kod: "T-0046" },
       { icon: BarChart3, label: "Raporlar", view: "finansal-raporlar", kod: "RPR" },
       { icon: History, label: "Tekrarlayan", view: "tekrarlayan", kod: "T-0015" },
       { icon: TrendingUp, label: "Satış Fırsatları", view: "pipeline", kod: "T-0011" },
