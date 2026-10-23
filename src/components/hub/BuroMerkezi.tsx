@@ -4,13 +4,14 @@ import type { LucideIcon } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
 import { useUsers } from "@/context/UsersContext";
 import type { View } from "@/App";
+import { useAllowedWorkspaces } from "@/hooks/useAccess";
 
-// Hızlı erişim — üst barda olmayan sayfalar.
-const HIZLI: { label: string; icon: LucideIcon; view: View }[] = [
-  { label: "Dashboard", icon: LayoutDashboard, view: "overview" },
-  { label: "Raporlar", icon: BarChart3, view: "finansal-raporlar" },
-  { label: "Tüm Tablolar", icon: Table2, view: "tables" },
-  { label: "Ayarlar", icon: Settings, view: "record-add" },
+// Hızlı erişim — üst barda olmayan sayfalar. (ws = erişim için gereken alan)
+const HIZLI: { label: string; icon: LucideIcon; view: View; ws: string }[] = [
+  { label: "Dashboard", icon: LayoutDashboard, view: "overview", ws: "startup" },
+  { label: "Raporlar", icon: BarChart3, view: "finansal-raporlar", ws: "finans" },
+  { label: "Tüm Tablolar", icon: Table2, view: "tables", ws: "ayarlar" },
+  { label: "Ayarlar", icon: Settings, view: "record-add", ws: "ayarlar" },
 ];
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -18,6 +19,7 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 export default function BuroMerkezi({ onNavigate }: { onNavigate: (v: View) => void }) {
   const { getModule } = useModules();
   const { currentUser } = useUsers();
+  const allowed = useAllowedWorkspaces();
   const recs = (id: string) => (getModule(id)?.records ?? []) as Array<Record<string, unknown>>;
   const td = todayISO();
   const me = currentUser.name;
@@ -34,13 +36,14 @@ export default function BuroMerkezi({ onNavigate }: { onNavigate: (v: View) => v
     { label: "Yaklaşan Termin", value: yaklasanTermin.length, accent: "#C1292E", view: "gorev-yonetimi" as View },
   ];
 
-  // Yönetim alanları (ana sayfa).
-  const YONETIM_ALANLARI: { title: string; desc: string; icon: LucideIcon; accent: string; view: View }[] = [
-    { title: "Proje Yönetimi", desc: "Projeler · görevler · hedef & bütçe · onay süreçleri", icon: FolderKanban, accent: "#3b82f6", view: "projects" },
-    { title: "Gayrimenkul Yönetimi", desc: "İnşaat · satış/satın alma · m² & maliyet · proje künyesi", icon: Building2, accent: "#10b981", view: "bi" },
-    { title: "Finans Yönetimi", desc: "CRM · ERP/Muhasebe · Bütçe · Nakit Akışı · raporlar", icon: Wallet, accent: "#0891b2", view: "finans-merkezi" },
-    { title: "Startup Yönetimi", desc: "Yatırım · ortaklık · startup portföyü · beklentiler", icon: Rocket, accent: "#f59e0b", view: "overview" },
+  // Yönetim alanları (ana sayfa) — yalnızca erişimi olanlar gösterilir.
+  const YONETIM_TUMU: { title: string; desc: string; icon: LucideIcon; accent: string; view: View; ws: string }[] = [
+    { title: "Proje Yönetimi", desc: "Projeler · görevler · hedef & bütçe · onay süreçleri", icon: FolderKanban, accent: "#3b82f6", view: "projects", ws: "proje" },
+    { title: "Gayrimenkul Yönetimi", desc: "İnşaat · satış/satın alma · m² & maliyet · proje künyesi", icon: Building2, accent: "#10b981", view: "bi", ws: "gayrimenkul" },
+    { title: "Finans Yönetimi", desc: "CRM · ERP/Muhasebe · Bütçe · Nakit Akışı · raporlar", icon: Wallet, accent: "#0891b2", view: "finans-merkezi", ws: "finans" },
+    { title: "Startup Yönetimi", desc: "Yatırım · ortaklık · startup portföyü · beklentiler", icon: Rocket, accent: "#f59e0b", view: "overview", ws: "startup" },
   ];
+  const YONETIM_ALANLARI = YONETIM_TUMU.filter((t) => allowed.has(t.ws));
 
   return (
     <div className="max-w-[1280px] space-y-7 px-4 py-8 md:px-6">
@@ -61,6 +64,7 @@ export default function BuroMerkezi({ onNavigate }: { onNavigate: (v: View) => v
       </div>
 
       {/* Yönetim Alanları */}
+      {YONETIM_ALANLARI.length > 0 && (
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Yönetim Alanları</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -80,12 +84,14 @@ export default function BuroMerkezi({ onNavigate }: { onNavigate: (v: View) => v
           })}
         </div>
       </section>
+      )}
 
       {/* Hızlı Erişim */}
+      {HIZLI.some((h) => allowed.has(h.ws)) && (
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Hızlı Erişim</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {HIZLI.map((h) => {
+          {HIZLI.filter((h) => allowed.has(h.ws)).map((h) => {
             const Icon = h.icon;
             return (
               <button key={h.label} onClick={() => onNavigate(h.view)} className="flex items-center gap-3 rounded-xl border border-line bg-panel/60 p-3.5 text-left transition hover:-translate-y-0.5 hover:border-neon-blue/40">
@@ -96,6 +102,7 @@ export default function BuroMerkezi({ onNavigate }: { onNavigate: (v: View) => v
           })}
         </div>
       </section>
+      )}
     </div>
   );
 }
