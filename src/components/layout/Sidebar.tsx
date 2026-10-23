@@ -1,8 +1,10 @@
-import { ChevronLeft, Printer, Settings } from "lucide-react";
+import { useState } from "react";
+import { ChevronLeft, Printer, Settings, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { View } from "@/App";
 import { WORKSPACES } from "@/lib/nav";
 import { useAllowedWorkspaces } from "@/hooks/useAccess";
+import BrandIntro from "@/components/layout/BrandIntro";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -17,6 +19,7 @@ interface SidebarProps {
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose, activeWs, onSelectWorkspace, onNavigate }: SidebarProps) {
   const allowed = useAllowedWorkspaces();
   const visibleWs = WORKSPACES.filter((w) => allowed.has(w.key));
+  const [introOpen, setIntroOpen] = useState(false);
   const Item = ({ icon: Icon, label, onClick, active, title }: { icon: LucideIcon; label: string; onClick: () => void; active?: boolean; title?: string }) => (
     <button
       onClick={onClick}
@@ -41,11 +44,22 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
           collapsed ? "md:w-[76px]" : "md:w-60"
         } ${mobileOpen ? "w-60 translate-x-0" : "w-60 -translate-x-full"}`}
       >
-        {/* Logo — Platform ana sayfasına döner */}
-        <button onClick={() => onNavigate("buro-merkezi")} title="Platform ana sayfa" className="flex h-16 w-full items-center gap-3 border-b border-white/10 px-5 text-left transition hover:bg-white/5">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-neon-blue to-neon-violet font-bold text-white shadow-glow-blue">iP</span>
-          {!collapsed && <p className="truncate text-sm font-semibold text-white">Timay Platform</p>}
-        </button>
+        {/* Logo — ana sayfa + köşede parıltı tuşu (animasyonlu giriş ekranı) */}
+        <div className="relative flex h-16 items-center border-b border-white/10">
+          <button onClick={() => onNavigate("buro-merkezi")} title="Platform ana sayfa" className={`flex h-full flex-1 items-center gap-3 px-5 text-left transition hover:bg-white/5 ${collapsed ? "justify-center px-0" : ""}`}>
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-neon-blue to-neon-violet font-bold text-white shadow-glow-blue">iP</span>
+            {!collapsed && <p className="truncate text-sm font-semibold text-white">Timay Platform</p>}
+          </button>
+          <button
+            onClick={() => setIntroOpen(true)}
+            title="Timay Platform'u tanı ✨"
+            className={`group grid place-items-center rounded-full text-amber-300 transition hover:scale-110 hover:text-amber-200 ${
+              collapsed ? "absolute right-1 top-1 h-6 w-6 bg-white/10" : "mr-3 h-8 w-8 bg-white/5 hover:bg-white/15"
+            }`}
+          >
+            <Sparkles size={collapsed ? 12 : 16} className="transition-transform group-hover:rotate-12" />
+          </button>
+        </div>
 
         {/* Çalışma alanları */}
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
@@ -65,6 +79,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
           </button>
         </div>
       </aside>
+      <BrandIntro open={introOpen} onClose={() => setIntroOpen(false)} />
     </>
   );
 }
