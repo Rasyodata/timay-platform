@@ -196,7 +196,7 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
             <div className="grid gap-0 md:grid-cols-2">
               <div className="relative min-h-[520px] border-dashed border-black/10 px-3 py-1 md:border-r" style={{ backgroundImage: "repeating-linear-gradient(transparent 0 33px, #D7E3EF 33px 34px)" }}>
                 {dayDefter.length === 0 && (
-                  <p className="pt-2 text-center text-[12px] text-ink/35">Boş — sağdaki Hızlı İşlemler'den sürükleyip bırakın ya da aşağıya not yazın.</p>
+                  <p className="pt-2 text-center text-[12px] text-ink/35">Boş — soldaki Hızlı İşlemler'den sürükleyip bırakın ya da aşağıya not yazın.</p>
                 )}
                 {leftCol.map(rowEl)}
               </div>
@@ -214,8 +214,8 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
           </div>
         </div>
 
-        {/* Sağ panel — Hızlı İşlemler (tıkla ya da deftere sürükle) */}
-        <div className="w-full shrink-0 lg:w-56">
+        {/* Sol panel — Hızlı İşlemler (Takvim gibi solda; tıkla ya da deftere sürükle) */}
+        <div className="w-full shrink-0 lg:order-first lg:w-56">
           <div className="rounded-xl border border-black/10 bg-white/70 p-3">
             <p className="mb-1 flex items-center gap-1.5 text-[12px] font-bold tracking-wide text-ink"><Plus size={13} className="text-neon-blue" /> HIZLI İŞLEMLER</p>
             <p className="mb-2.5 text-[11px] text-ink/50">Tıkla ya da <b className="text-ink/70">deftere sürükle bırak</b> — seçili güne eklenir.</p>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { SyntheticEvent } from "react";
-import { Radio, Clock } from "lucide-react";
+import { Radio, Clock, X, ArrowRight } from "lucide-react";
 import LoginScreen from "@/components/auth/LoginScreen";
 import { useUsers } from "@/context/UsersContext";
 
@@ -48,7 +48,7 @@ export default function BrandIntro({ open, onClose }: { open: boolean; onClose: 
         <div className="flex items-center gap-2 rounded-full border border-neon-blue/30 bg-neon-blue/10 px-3 py-1.5 text-xs font-semibold text-neon-blue backdrop-blur">
           <Radio size={14} className="animate-pulse" /> CANLI KOMUTA MERKEZİ
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="hidden items-center gap-2 rounded-full border border-line bg-panel/70 px-3 py-1.5 backdrop-blur sm:flex">
             <span className="flex -space-x-2">
               {online.slice(0, 5).map((u) => (
@@ -66,12 +66,20 @@ export default function BrandIntro({ open, onClose }: { open: boolean; onClose: 
               <p className="text-[10px] capitalize leading-tight text-muted">{tarih}</p>
             </div>
           </div>
+          {/* Kapat — belirgin, dokunulabilir (mobil dahil) */}
+          <button onClick={dismiss} aria-label="Ekranı aç" title="Kapat (ESC)" className="pointer-events-auto grid h-10 w-10 shrink-0 place-items-center rounded-full border border-line bg-panel text-ink shadow-card transition hover:bg-critical hover:text-white active:scale-95">
+            <X size={20} />
+          </button>
         </div>
       </div>
 
-      <p className="pointer-events-none absolute inset-x-0 bottom-4 text-center text-[11px] text-muted">
-        Ekran koruyucu · ekrana tıkla ya da ESC ile devam et
-      </p>
+      {/* Devam Et — alt-orta, büyük dokunma hedefi */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-6 flex flex-col items-center gap-2">
+        <button onClick={dismiss} className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-neon-blue to-neon-violet px-7 py-3 text-sm font-semibold text-white shadow-card transition hover:scale-105 active:scale-95">
+          Devam Et <ArrowRight size={16} />
+        </button>
+        <p className="text-[11px] text-muted">ekranın herhangi bir yerine dokun ya da ESC</p>
+      </div>
     </div>
   );
 }
