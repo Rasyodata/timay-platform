@@ -158,7 +158,8 @@ export default function KasaDefteri() {
     }
     return bal;
   }, [book, curStr]);
-  const dundenDevir = day.devir ?? cumulativeBefore;
+  // Dünden devir her zaman önceki günlerin hareketlerinden hesaplanır (elle değiştirilemez)
+  const dundenDevir = cumulativeBefore;
   const girenTop = entries.filter((e) => e.yon === "Giren").reduce((s, e) => s + (Number(e.tutar) || 0), 0);
   const cikanTop = entries.filter((e) => e.yon === "Çıkan").reduce((s, e) => s + (Number(e.tutar) || 0), 0);
   const yarinaDevir = dundenDevir + girenTop - cikanTop;
@@ -170,7 +171,6 @@ export default function KasaDefteri() {
   const addEntry = (e: Partial<Row>) => setDay({ entries: [...entries, { id: rid(), tarih: curStr, yon: "Giren", tur: "", ilgili: "", aciklama: "", tutar: 0, ...e }] });
   const updEntry = (id: string, patch: Partial<Row>) => setDay({ entries: entries.map((r) => (r.id === id ? { ...r, ...patch } : r)) });
   const delEntry = (id: string) => setDay({ entries: entries.filter((r) => r.id !== id) });
-  const setDevirOverride = (v: string) => { const n = v.trim() === "" ? undefined : Number(v); setDay({ devir: isNaN(n as number) ? undefined : n }); };
 
   // Türe göre "İlgili" seçenekleri
   const ilgiliOpts = (tur: string): string[] => {
@@ -322,10 +322,10 @@ export default function KasaDefteri() {
         {/* Tek sayfa defter */}
         <div className="min-w-0 flex-1 overflow-hidden rounded-xl border border-black/10 shadow-[0_8px_24px_rgba(0,0,0,0.12)]" style={{ background: "#FBF7EC" }}>
           <div className="flex items-center justify-between gap-2 border-b border-black/10 bg-black/[0.03] px-3 py-2">
-            <div className="flex items-center gap-2 text-[12px]">
+            <div className="flex items-center gap-2 text-[12px]" title="Önceki günlerin hareketlerinden otomatik hesaplanır — elle değiştirilemez; düzeltmek için ilgili hareketi düzeltin">
               <span className="font-semibold text-amber-800">Dünden Devir</span>
-              <input value={day.devir ?? ""} onChange={(e) => setDevirOverride(e.target.value)} placeholder={String(cumulativeBefore.toFixed(2))} type="number"
-                className="w-28 rounded border border-amber-300 bg-white/80 px-2 py-0.5 text-right text-[13px] font-semibold text-amber-900 outline-none nums" title="Boş = otomatik (önceki bakiye); elle gir = değiştir" />
+              <span className="nums rounded border border-amber-200 bg-amber-50/60 px-2 py-0.5 text-right text-[13px] font-semibold text-amber-900">{tl(cumulativeBefore)}</span>
+              <span className="text-[10px] text-amber-700/70">🔒 otomatik</span>
             </div>
             <button onClick={() => addEntry({})} className="flex items-center gap-1 rounded-md border border-black/10 bg-white/70 px-2.5 py-1 text-[11px] font-semibold text-ink/70 transition hover:text-neon-blue"><Plus size={12} /> Satır Ekle</button>
           </div>

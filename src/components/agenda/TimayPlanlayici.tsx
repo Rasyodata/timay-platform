@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import {
   CheckSquare, Square, Droplet, Smile, Meh, Frown, Pill, ChevronLeft, ChevronRight,
-  Plus, BookOpen, Send, FileText, X, Trash2, CheckCircle2,
+  Plus, BookOpen, Send, FileText, X, Trash2, CheckCircle2, Check,
 } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
 import { RecordForm } from "@/components/projects/ProjectTableCard";
@@ -26,7 +26,18 @@ const TIP: Record<string, { renk: string; kisa: string }> = {
   "Not": { renk: "#CA8A04", kisa: "NOT" },
   "Tutanak": { renk: "#7C3AED", kisa: "TUTANAK" },
   "İstek": { renk: "#C1292E", kisa: "İSTEK" },
+  "Onay": { renk: "#B5731A", kisa: "ONAY" },
 };
+// Kaynak çeltikleri — hangi türler Günün Defteri'nde gösterilsin
+const KAYNAKLAR: { key: string; label: string; tips: string[] }[] = [
+  { key: "Ajanda", label: "Ajanda", tips: ["Etkinlik"] },
+  { key: "Görevler", label: "Görevler", tips: ["Görev"] },
+  { key: "Onaylar", label: "Onaylar", tips: ["Onay"] },
+  { key: "İstekler", label: "İstekler", tips: ["İstek"] },
+  { key: "Notlar", label: "Notlar", tips: ["Not"] },
+  { key: "Toplantı", label: "Toplantı", tips: ["Tutanak"] },
+];
+const TIP_TO_KAYNAK: Record<string, string> = Object.fromEntries(KAYNAKLAR.flatMap((k) => k.tips.map((t) => [t, k.key])));
 
 // Hızlı İşlemler — ilgili tabloya yerinde kayıt açar (sağ panelde; deftere sürüklenebilir)
 const SEKMELER: { label: string; renk: string; addMod: string; defaults?: Record<string, unknown> }[] = [
@@ -54,6 +65,8 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
   const [ilacInput, setIlacInput] = useState("");
   const [addModal, setAddModal] = useState<{ modId: string; baslik: string; defaults?: Record<string, unknown>; rec?: DynamicRecord } | null>(null);
   const [noteText, setNoteText] = useState("");
+  const [kaynaklar, setKaynaklar] = useState<Set<string>>(() => new Set(KAYNAKLAR.map((k) => k.key)));
+  const toggleKaynak = (k: string) => setKaynaklar((prev) => { const n = new Set(prev); if (n.has(k)) n.delete(k); else n.add(k); return n; });
   const [hatirlatma, setHatirlatma] = useState<{ date?: string } | null>(null);
   const [dragSek, setDragSek] = useState<string | null>(null);
   const noteRef = useRef<HTMLInputElement>(null);
@@ -73,7 +86,8 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
     ...recs("mod-T-0068").filter((r) => r.arsiv !== true && String(r.tarih) === curStr).map((r) => ({ id: "n" + r.id, modId: "mod-T-0068", rec: r, tip: "Not", title: String(r.baslik || r.icerik || ""), time: "" })),
     ...recs("mod-T-0063").filter((r) => String(r.tarih) === curStr).map((r) => ({ id: "t" + r.id, modId: "mod-T-0063", rec: r, tip: "Tutanak", title: String(r.toplanti || ""), time: String(r.saat || "") })),
     ...recs("mod-T-0076").filter((r) => String(r.tarih) === curStr).map((r) => ({ id: "q" + r.id, modId: "mod-T-0076", rec: r, tip: "İstek", title: String(r.konu || ""), time: "" })),
-  ].sort((a, b) => a.time.localeCompare(b.time));
+    ...recs("mod-T-0045").filter((r) => String(r.tarih) === curStr).map((r) => ({ id: "o" + r.id, modId: "mod-T-0045", rec: r, tip: "Onay", title: String(r.konu || ""), time: "" })),
+  ].filter((it) => kaynaklar.has(TIP_TO_KAYNAK[it.tip] ?? it.tip)).sort((a, b) => a.time.localeCompare(b.time));
 
   const nav = (d: number) => setCur((c) => c + d * ONE);
   const bugun = () => { const d = new Date(); d.setHours(0, 0, 0, 0); setCur(d.getTime()); };
@@ -165,8 +179,18 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
             onDrop={dragSek ? (e) => { e.preventDefault(); const s = SEKMELER.find((x) => x.label === dragSek); if (s) addSekme(s); setDragSek(null); } : undefined}
             className={`overflow-hidden rounded-xl border bg-white/70 transition ${dragSek ? "border-neon-blue ring-2 ring-neon-blue/40" : "border-black/10"}`}
           >
-            <div className="flex items-center gap-2 px-3 py-1.5" style={{ background: "#CFE4F7" }}>
+            <div className="flex flex-wrap items-center gap-2 px-3 py-1.5" style={{ background: "#CFE4F7" }}>
               <span className="flex items-center gap-1.5 text-[12px] font-bold tracking-wide text-ink"><BookOpen size={13} /> GÜNÜN DEFTERİ <span className="font-normal text-ink/50">({dayDefter.length})</span></span>
+              <div className="ml-auto flex flex-wrap items-center gap-1">
+                {KAYNAKLAR.map((k) => { const on = kaynaklar.has(k.key); const m = TIP[k.tips[0]]; return (
+                  <button key={k.key} onClick={() => toggleKaynak(k.key)} title={on ? "Gizle" : "Göster"}
+                    className={`flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-semibold transition ${on ? "text-white" : "border-black/15 bg-white/70 text-ink/60"}`}
+                    style={on ? { background: m.renk, borderColor: m.renk } : undefined}>
+                    <span className={`grid h-3 w-3 place-items-center rounded-sm border ${on ? "border-white/70 bg-white/25" : "border-black/20"}`}>{on ? <Check size={9} className="text-white" /> : null}</span>
+                    {k.label}
+                  </button>
+                ); })}
+              </div>
             </div>
             {/* Çizgili defter — iki sayfa (ikiye bölünmüş) */}
             <div className="grid gap-0 md:grid-cols-2">
