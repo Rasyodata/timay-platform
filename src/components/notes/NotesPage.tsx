@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useModules } from "@/context/ModulesContext";
+import { useUsers } from "@/context/UsersContext";
 import MesajGonderModal from "@/components/messaging/MesajGonderModal";
 import MentionTextarea from "@/components/common/MentionTextarea";
 import type { DynamicRecord } from "@/types/modules";
@@ -42,6 +43,11 @@ const NOT_TURLERI: { label: string; icon: LucideIcon; renk: string }[] = [
 
 export default function NotesPage(_props: { onNavigate?: (v: View) => void }) {
   const { getModule, addRecord, updateRecord, deleteRecord } = useModules();
+  const { currentUser } = useUsers();
+  const me = currentUser.name;
+  const isOwner = currentUser.role === "owner";
+  // Not bana mı ait / benimle mi paylaşıldı (eski kayıtlar herkese açık)
+  const gorunur = (r: DynamicRecord) => isOwner || !r.olusturan || String(r.olusturan) === me || String(r.paylasilan ?? "").split(",").map((s) => s.trim()).includes(me);
   const [q, setQ] = useState("");
   const [sekme, setSekme] = useState<"aktif" | "arsiv">("aktif");
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -56,10 +62,12 @@ export default function NotesPage(_props: { onNavigate?: (v: View) => void }) {
   const notes = useMemo(() => {
     const qn = q.trim().toLocaleLowerCase("tr");
     return records
+      .filter(gorunur)
       .filter((r) => (sekme === "arsiv" ? r.arsiv === true : r.arsiv !== true))
       .filter((r) => (qn ? [r.baslik, r.icerik, r.etiket].some((v) => String(v ?? "").toLocaleLowerCase("tr").includes(qn)) : true))
       .sort((a, b) => String(b.tarih ?? "").localeCompare(String(a.tarih ?? "")));
-  }, [records, q, sekme]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [records, q, sekme, me, isOwner]);
 
   // Defter: tarihe göre grupla
   const byDate = useMemo(() => {
@@ -142,7 +150,11 @@ export default function NotesPage(_props: { onNavigate?: (v: View) => void }) {
                               {r.hatirlatma ? <Bell size={12} className="shrink-0 text-neon-blue" fill="currentColor" /> : null}
                               {chips(r.etiket).map((t) => <span key={t} className="hidden shrink-0 items-center gap-0.5 rounded-full bg-black/5 px-1.5 py-0.5 text-[9px] text-ink/60 sm:inline-flex"><Tag size={8} /> {t}</span>)}
                             </div>
-                            {r.icerik ? <p className="truncate text-[11px] text-muted">{String(r.icerik)}</p> : null}
+                            <p className="flex flex-wrap items-center gap-x-2 truncate text-[11px] text-muted">
+                              {r.olusturan ? <span className="inline-flex items-center gap-0.5 font-medium text-ink/70"><Users size={9} /> {String(r.olusturan)}</span> : null}
+                              {String(r.paylasilan ?? "").trim() ? <span className="text-neon-blue">· paylaşıldı: {String(r.paylasilan)}</span> : null}
+                              {r.icerik ? <span className="truncate">{r.olusturan ? "· " : ""}{String(r.icerik)}</span> : null}
+                            </p>
                           </div>
                           <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
                             <button onClick={() => duzelt(r)} title="Düzelt" className="grid h-7 w-7 place-items-center rounded-lg text-faint transition hover:bg-neon-blue/10 hover:text-neon-blue"><Pencil size={14} /></button>
@@ -178,6 +190,7 @@ function NoteEditor({ initial, onClose, onSave, onDelete, embedded, presetBaslik
   presetBaslik?: string;
   presetRenk?: string;
 }) {
+  const { users, currentUser } = useUsers();
   const [baslik, setBaslik] = useState(String(initial?.baslik ?? presetBaslik ?? ""));
   const [icerik, setIcerik] = useState(String(initial?.icerik ?? ""));
   const [onem, setOnem] = useState(String(initial?.onem ?? "Normal"));
@@ -185,10 +198,13 @@ function NoteEditor({ initial, onClose, onSave, onDelete, embedded, presetBaslik
   const [etiket, setEtiket] = useState(String(initial?.etiket ?? ""));
   const [tarih, setTarih] = useState(String(initial?.tarih ?? BUGUN));
   const [hatirlatma, setHatirlatma] = useState(Boolean(initial?.hatirlatma));
+  const [paylasilan, setPaylasilan] = useState<string[]>(() => String(initial?.paylasilan ?? "").split(",").map((s) => s.trim()).filter(Boolean));
+  const togglePaylas = (name: string) => setPaylasilan((p) => (p.includes(name) ? p.filter((x) => x !== name) : [...p, name]));
+  const digerler = users.filter((u) => u.name !== currentUser.name && u.active);
 
   const kaydet = () => {
     if (!baslik.trim()) return;
-    onSave({ baslik: baslik.trim(), icerik, onem, renk, etiket, tarih, hatirlatma, arsiv: initial?.arsiv === true }, initial ? String(initial.id) : undefined);
+    onSave({ baslik: baslik.trim(), icerik, onem, renk, etiket, tarih, hatirlatma, arsiv: initial?.arsiv === true, olusturan: String(initial?.olusturan ?? currentUser.name), paylasilan: paylasilan.join(", ") }, initial ? String(initial.id) : undefined);
   };
 
   const card = (
@@ -232,6 +248,20 @@ function NoteEditor({ initial, onClose, onSave, onDelete, embedded, presetBaslik
             <input value={etiket} onChange={(e) => setEtiket(e.target.value)} placeholder="virgülle ayır" className="w-full rounded-lg border border-black/15 bg-white/70 px-2 py-1.5 text-sm text-ink outline-none focus:border-neon-blue" />
           </label>
         </div>
+
+        {/* Çoklu kullanıcı paylaşımı — seçilenlerin notlarına da işlenir */}
+        <div>
+          <p className="mb-1 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-ink/60"><Users size={11} /> Paylaş {paylasilan.length ? `(${paylasilan.length})` : ""}</p>
+          {digerler.length === 0 ? <p className="text-[11px] text-ink/40">Başka kullanıcı yok.</p> : (
+            <div className="flex flex-wrap gap-1.5">
+              {digerler.map((u) => { const on = paylasilan.includes(u.name); return (
+                <button key={u.id} type="button" onClick={() => togglePaylas(u.name)} className={`rounded-full border px-2 py-0.5 text-[11px] font-medium transition ${on ? "border-neon-blue bg-neon-blue text-white" : "border-black/15 bg-white/60 text-ink/70 hover:text-ink"}`}>{on ? "✓ " : ""}{u.name}</button>
+              ); })}
+            </div>
+          )}
+          {paylasilan.length > 0 && <p className="mt-1 text-[10px] text-neon-blue">Bu not seçili kullanıcıların notlarında da görünür.</p>}
+        </div>
+
         <button onClick={() => setHatirlatma((v) => !v)} className={`flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${hatirlatma ? "border-neon-blue bg-neon-blue/10 text-neon-blue" : "border-black/15 bg-white/60 text-ink/70"}`}>
           {hatirlatma ? <Bell size={15} fill="currentColor" /> : <BellOff size={15} />} {hatirlatma ? "Hatırlatıcı açık — tarihinde ajandada hatırlatılır" : "Hatırlatıcı ekle"}
         </button>
