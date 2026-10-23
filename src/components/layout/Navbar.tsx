@@ -12,6 +12,7 @@ import { useModules } from "@/context/ModulesContext";
 import { useProjects } from "@/context/ProjectsContext";
 import { ROLE_LABELS } from "@/types/modules";
 import { WORKSPACES } from "@/lib/nav";
+import { useAccess } from "@/hooks/useAccess";
 import type { View } from "@/App";
 
 interface NavbarProps {
@@ -255,6 +256,7 @@ export default function Navbar({ onMenu, onNavigate, view, activeWs }: NavbarPro
   const { live, toggleLive } = useDashboard();
   const { getModule } = useModules();
   const { currentUser } = useUsers();
+  const access = useAccess();
   const unreadMsgList = (getModule("mod-T-0087")?.records ?? []).filter((r) => { const m = r as Record<string, unknown>; return m.alici === currentUser.name && !m.okundu; }).sort((a, b) => String((b as Record<string, unknown>).tarih).localeCompare(String((a as Record<string, unknown>).tarih)));
   const unreadMsg = unreadMsgList.length;
   const [notifOpen, setNotifOpen] = useState(false);
@@ -270,7 +272,9 @@ export default function Navbar({ onMenu, onNavigate, view, activeWs }: NavbarPro
   const badgeFor = (v: View): number | undefined => (v === "gorev-yonetimi" ? openTasks : v === "onaylar" ? pendingAppr : undefined);
 
   const ws = WORKSPACES.find((w) => w.key === activeWs) ?? WORKSPACES[0];
-  const TABS = ws.tabs.map((t) => ({ icon: t.icon, label: t.label, view: t.view, kod: t.kod, badge: badgeFor(t.view), active: t.match ? t.match(view) : t.view === view }));
+  const TABS = ws.tabs
+    .filter((t) => access.canSeeTab(ws.key, String(t.view)))
+    .map((t) => ({ icon: t.icon, label: t.label, view: t.view, kod: t.kod, badge: badgeFor(t.view), active: t.match ? t.match(view) : t.view === view }));
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-base/80 px-4 backdrop-blur-xl md:px-6">

@@ -48,7 +48,7 @@ import { ModulesProvider } from "@/context/ModulesContext";
 import { ProjectsProvider } from "@/context/ProjectsContext";
 import { UsersProvider } from "@/context/UsersContext";
 import { WORKSPACES, workspaceForView } from "@/lib/nav";
-import { useAllowedWorkspaces } from "@/hooks/useAccess";
+import { useAccess } from "@/hooks/useAccess";
 
 /** Basit görünüm yönlendirmesi. */
 export type View =
@@ -99,18 +99,25 @@ function DashboardShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [view, setView] = useState<View>("ajandam");
   const [activeWs, setActiveWs] = useState("buro");
-  const allowedWs = useAllowedWorkspaces();
+  const access = useAccess();
 
-  // Yetkisiz çalışma alanındaysa ilk izinli alana yönlendir (kullanıcı değişince de)
+  // Yetkisiz çalışma alanı/sekmedeyse izinli olana yönlendir (kullanıcı değişince de)
   useEffect(() => {
     const vw = workspaceForView(view);
-    const wsOk = allowedWs.has(activeWs) && (!vw || allowedWs.has(vw));
-    if (!wsOk) {
-      const first = WORKSPACES.find((w) => allowedWs.has(w.key)) ?? WORKSPACES[0];
+    const firstVisibleTab = (key: string) => WORKSPACES.find((w) => w.key === key)?.tabs.find((t) => access.canSeeTab(key, String(t.view)))?.view;
+    // 1) Çalışma alanı hiç yetkide değilse → ilk izinli alanın ilk görünür sekmesine
+    if (!access.workspaces.has(activeWs) || (vw && !access.workspaces.has(vw))) {
+      const first = WORKSPACES.find((w) => access.workspaces.has(w.key)) ?? WORKSPACES[0];
       setActiveWs(first.key);
-      setView(first.defaultView);
+      setView(firstVisibleTab(first.key) ?? first.defaultView);
+      return;
     }
-  }, [allowedWs, activeWs, view]);
+    // 2) Alan izinli ama bu sekme yetkide değilse → o alanın ilk görünür sekmesine
+    if (vw && !access.canSeeTab(vw, String(view))) {
+      const nv = firstVisibleTab(vw);
+      if (nv) setView(nv);
+    }
+  }, [access, activeWs, view]);
 
   // İçerik navigasyonu — görünümün ait olduğu çalışma alanını türetir (belirsizse korur).
   const navigate = (v: View) => {
