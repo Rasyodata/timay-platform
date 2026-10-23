@@ -107,8 +107,9 @@ const dmy = (iso: string) => (iso ? String(iso).split("-").reverse().join(".") :
 
 export default function MuhasebeMerkezi({ onNavigate, moduleKey }: { onNavigate: (v: View) => void; moduleKey?: string }) {
   const { getModule } = useModules();
-  // Seçili modül sol bardan gelir (view "muhasebe:<key>"); yoksa Finans.
-  const modul = MODULLER.find((m) => m.key === moduleKey) ?? MODULLER.find((m) => m.key === "finans") ?? MODULLER[0];
+  // Modül sol bardan gelir (view "muhasebe:<key>"); yoksa genel bakış.
+  const isOverview = !moduleKey;
+  const modul = MODULLER.find((m) => m.key === moduleKey) ?? MODULLER[0];
 
   // Çek/Senet portföy raporu — T-0007 kasa hareketlerinden süzülür
   const cekSenetReport = (kind: "eldeki-cek" | "eldeki-senet" | "verilen-cek" | "verilen-senet") => {
@@ -147,6 +148,27 @@ export default function MuhasebeMerkezi({ onNavigate, moduleKey }: { onNavigate:
         </div>
       </div>
 
+      {isOverview ? (
+        /* GENEL BAKIŞ — 6 modül kartı; tıkla → modülün bölümleri */
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {MODULLER.map((m) => (
+            <button key={m.key} onClick={() => onNavigate(`muhasebe:${m.key}`)}
+              className="group flex flex-col gap-3 rounded-xl border border-line bg-panel p-4 text-left transition hover:-translate-y-0.5 hover:shadow-card"
+              style={{ borderColor: m.renk + "33" }}>
+              <div className="flex items-center gap-2.5">
+                <span className="grid h-10 w-10 place-items-center rounded-xl" style={{ background: m.renk + "1f", color: m.renk }}><m.icon size={20} /></span>
+                <div className="min-w-0"><p className="text-base font-bold text-ink">{m.label}</p><p className="truncate text-[11px] text-muted">{m.aciklama}</p></div>
+                <ChevronRight size={16} className="ml-auto shrink-0 text-faint transition group-hover:translate-x-0.5" style={{ color: m.renk }} />
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {SECTIONS.map((s) => (
+                  <span key={s.key} className="inline-flex items-center gap-1 rounded-md bg-base/60 px-2 py-0.5 text-[10px] font-medium text-muted"><s.icon size={10} /> {s.label.split(" ")[0]} · {m.sek[s.key].length}</span>
+                ))}
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : (<>
       {/* Seçili modülün bölümleri (Kayıt / Evraklar / Raporlar / Analiz) — modül sol bardan seçilir */}
       <div className="mb-3 flex items-center gap-2 rounded-xl border px-3 py-2" style={{ borderColor: modul.renk + "55", background: modul.renk + "0d" }}>
         <span className="grid h-8 w-8 place-items-center rounded-lg" style={{ background: modul.renk + "1f", color: modul.renk }}><modul.icon size={17} /></span>
@@ -169,6 +191,7 @@ export default function MuhasebeMerkezi({ onNavigate, moduleKey }: { onNavigate:
           </div>
         ); })}
       </div>
+      </>)}
     </div>
   );
 }
