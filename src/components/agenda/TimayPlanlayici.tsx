@@ -10,6 +10,8 @@ import { RecordForm } from "@/components/projects/ProjectTableCard";
 import TalepForm from "@/components/requests/TalepForm";
 import HatirlatmaModal from "@/components/agenda/HatirlatmaModal";
 import { loadCalisma } from "@/components/notes/CalismaDefteri";
+import { loadToplantilar } from "@/components/hub/ToplantiOdasi";
+import { useUsers } from "@/context/UsersContext";
 import type { DynamicRecord } from "@/types/modules";
 import type { View } from "@/App";
 
@@ -31,6 +33,7 @@ const TIP: Record<string, { renk: string; kisa: string }> = {
   "İstek": { renk: "#C1292E", kisa: "İSTEK" },
   "Onay": { renk: "#B5731A", kisa: "ONAY" },
   "Çalışma": { renk: "#4B3FB0", kisa: "ÇALIŞMA" },
+  "Toplantı Odası": { renk: "#0A4EA2", kisa: "TOPLANTI" },
 };
 // Kaynak çeltikleri — hangi türler Günün Defteri'nde gösterilsin
 const KAYNAKLAR: { key: string; label: string; tips: string[] }[] = [
@@ -41,6 +44,7 @@ const KAYNAKLAR: { key: string; label: string; tips: string[] }[] = [
   { key: "Notlar", label: "Notlar", tips: ["Not"] },
   { key: "Toplantı", label: "Toplantı", tips: ["Tutanak"] },
   { key: "Çalışma", label: "Çalışma", tips: ["Çalışma"] },
+  { key: "Toplantı Odası", label: "Toplantı Odası", tips: ["Toplantı Odası"] },
 ];
 const TIP_TO_KAYNAK: Record<string, string> = Object.fromEntries(KAYNAKLAR.flatMap((k) => k.tips.map((t) => [t, k.key])));
 
@@ -61,6 +65,7 @@ const SEKMELER: { label: string; renk: string; icon: LucideIcon; addMod: string;
 
 export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View) => void }) {
   const { getModule, addRecord, deleteRecord } = useModules();
+  const { currentUser } = useUsers();
   const recs = (id: string) => (getModule(id)?.records ?? []) as DynamicRecord[];
   const [cur, setCur] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); });
   const [su, setSu] = useState(4);
@@ -93,6 +98,7 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
     ...recs("mod-T-0076").filter((r) => String(r.tarih) === curStr).map((r) => ({ id: "q" + r.id, modId: "mod-T-0076", rec: r, tip: "İstek", title: String(r.konu || ""), time: "" })),
     ...recs("mod-T-0045").filter((r) => String(r.tarih) === curStr).map((r) => ({ id: "o" + r.id, modId: "mod-T-0045", rec: r, tip: "Onay", title: String(r.konu || ""), time: "" })),
     ...loadCalisma().filter((s) => s.tarih === curStr).map((s) => ({ id: "cls" + s.id, modId: "", rec: {} as DynamicRecord, tip: "Çalışma", title: `${s.baslik}${s.durum ? " · " + s.durum : ""}`, time: "" })),
+    ...loadToplantilar().filter((m) => m.tarih === curStr && (m.olusturan === currentUser.name || m.katilimcilar.includes(currentUser.name))).map((m) => ({ id: "tpo" + m.id, modId: "", rec: {} as DynamicRecord, tip: "Toplantı Odası", title: m.baslik, time: m.saat || "" })),
   ].filter((it) => kaynaklar.has(TIP_TO_KAYNAK[it.tip] ?? it.tip)).sort((a, b) => a.time.localeCompare(b.time));
 
   const nav = (d: number) => setCur((c) => c + d * ONE);
@@ -130,14 +136,14 @@ export default function TimayPlanlayici({ onNavigate }: { onNavigate?: (v: View)
   // Defteri ikiye böl (iki sayfa)
   const mid = Math.ceil(dayDefter.length / 2);
   const leftCol = dayDefter.slice(0, mid), rightCol = dayDefter.slice(mid);
-  const rowEl = (it: (typeof dayDefter)[number]) => { const m = TIP[it.tip]; const isCalisma = it.tip === "Çalışma"; return (
+  const rowEl = (it: (typeof dayDefter)[number]) => { const m = TIP[it.tip]; const salt = it.tip === "Çalışma" || it.tip === "Toplantı Odası"; return (
     <div key={it.id} className="group flex w-full items-center gap-2" style={{ height: 34 }}>
-      <button onClick={() => isCalisma ? onNavigate?.("calisma-defteri") : setAddModal({ modId: it.modId, baslik: it.tip, rec: it.rec })} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+      <button onClick={() => salt ? onNavigate?.(it.tip === "Çalışma" ? "calisma-defteri" : "toplanti-odasi") : setAddModal({ modId: it.modId, baslik: it.tip, rec: it.rec })} className="flex min-w-0 flex-1 items-center gap-2 text-left">
         <span className="w-16 shrink-0 rounded px-1 py-0.5 text-center text-[8px] font-bold tracking-wide" style={{ background: `${m.renk}1f`, color: m.renk }}>{m.kisa}</span>
         {it.time ? <span className="w-10 shrink-0 text-[11px] text-ink/45 nums">{it.time}</span> : <span className="w-10 shrink-0" />}
         <span className="flex-1 truncate text-[14px] text-ink/85">{it.title}</span>
       </button>
-      {!isCalisma && (
+      {!salt && (
       <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
         <button onClick={() => onayaGonder(it)} title="Onaya gönder" className="grid h-6 w-6 place-items-center rounded text-ink/40 transition hover:bg-neon-blue/10 hover:text-neon-blue"><CheckCircle2 size={14} /></button>
         <button onClick={() => silDefter(it)} title="Sil" className="grid h-6 w-6 place-items-center rounded text-ink/40 transition hover:bg-critical/10 hover:text-critical"><Trash2 size={14} /></button>

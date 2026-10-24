@@ -7,6 +7,7 @@ import TalepForm from "@/components/requests/TalepForm";
 import HatirlatmaModal from "@/components/agenda/HatirlatmaModal";
 import MesajGonderModal from "@/components/messaging/MesajGonderModal";
 import { loadCalisma } from "@/components/notes/CalismaDefteri";
+import { loadToplantilar } from "@/components/hub/ToplantiOdasi";
 import type { DynamicRecord, DynamicModule } from "@/types/modules";
 import type { View } from "@/App";
 
@@ -32,6 +33,7 @@ const TIP_META: Record<string, { renk: string; kisa: string }> = {
   "Tutanak": { renk: "#7C3AED", kisa: "TUTANAK" },
   "Kasa": { renk: "#0891B2", kisa: "KASA" },
   "Çalışma": { renk: "#4B3FB0", kisa: "ÇALIŞMA" },
+  "Toplantı Odası": { renk: "#0A4EA2", kisa: "TOPLANTI" },
 };
 // Takvim/defter kaynak çeltikleri — hangi türler gösterilsin
 const KAYNAKLAR: { key: string; label: string; tips: string[] }[] = [
@@ -42,6 +44,7 @@ const KAYNAKLAR: { key: string; label: string; tips: string[] }[] = [
   { key: "Notlar", label: "Notlar", tips: ["Not"] },
   { key: "Toplantı", label: "Toplantı", tips: ["Tutanak"] },
   { key: "Çalışma", label: "Çalışma", tips: ["Çalışma"] },
+  { key: "Toplantı Odası", label: "Toplantı Odası", tips: ["Toplantı Odası"] },
   { key: "Kasa", label: "Kasa", tips: ["Kasa"] },
 ];
 const TIP_TO_KAYNAK: Record<string, string> = Object.fromEntries(KAYNAKLAR.flatMap((k) => k.tips.map((t) => [t, k.key])));
@@ -169,10 +172,15 @@ export default function AjandaDashboard({ onNavigate, projeFilter }: { onNavigat
     key: "cls" + s.id, rec: {} as DynamicRecord, mod: undefined as unknown as DynamicModule, date: s.tarih, time: "",
     title: `${s.baslik}${s.durum ? " · " + s.durum : ""}`, tip: "Çalışma", color: TIP_META["Çalışma"].renk,
   })) : [];
-  const shownEntries = [...allEntries, ...kasaEntries, ...calismaEntries].filter((e) => kaynaklar.has(TIP_TO_KAYNAK[e.tip] ?? e.tip));
+  // Toplantı Odası toplantıları — yalnız katılımcısı/oluşturanı olduğun toplantılar kendi takvimine düşer
+  const toplantiEntries = kaynaklar.has("Toplantı Odası") ? loadToplantilar().filter((m) => m.tarih && (m.olusturan === currentUser.name || m.katilimcilar.includes(currentUser.name))).map((m) => ({
+    key: "tpo" + m.id, rec: {} as DynamicRecord, mod: undefined as unknown as DynamicModule, date: m.tarih, time: m.saat || "",
+    title: m.baslik, tip: "Toplantı Odası", color: TIP_META["Toplantı Odası"].renk,
+  })) : [];
+  const shownEntries = [...allEntries, ...kasaEntries, ...calismaEntries, ...toplantiEntries].filter((e) => kaynaklar.has(TIP_TO_KAYNAK[e.tip] ?? e.tip));
   const onDate = (s: string) => shownEntries.filter((e) => e.date === s).sort((a, b) => a.time.localeCompare(b.time));
   const defterItems = onDate(curStr);
-  const openEntry = (e: { mod: DynamicModule; rec: DynamicRecord; tip: string }) => { if (e.tip === "Çalışma") onNavigate("calisma-defteri"); else if (e.tip === "Kasa" || !e.mod) onNavigate("kasa-defteri"); else setModal({ mod: e.mod, rec: e.rec }); };
+  const openEntry = (e: { mod: DynamicModule; rec: DynamicRecord; tip: string }) => { if (e.tip === "Çalışma") onNavigate("calisma-defteri"); else if (e.tip === "Toplantı Odası") onNavigate("toplanti-odasi"); else if (e.tip === "Kasa" || !e.mod) onNavigate("kasa-defteri"); else setModal({ mod: e.mod, rec: e.rec }); };
   const weekStart = (() => { const d = new Date(cur); const dow = (d.getDay() + 6) % 7; d.setDate(d.getDate() - dow); d.setHours(0, 0, 0, 0); return d.getTime(); })();
   const weekDays = Array.from({ length: 7 }, (_, i) => new Date(weekStart + i * ONE));
   const monCells: (number | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: dim }, (_, i) => i + 1)];

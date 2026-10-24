@@ -39,6 +39,7 @@ import {
   Activity,
   Banknote,
   Lightbulb,
+  Presentation,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { View } from "@/App";
@@ -59,6 +60,7 @@ export const WORKSPACES: Workspace[] = [
       { icon: StickyNote, label: "Notlar", view: "notlar", kod: "T-0068" },
       { icon: NotebookPen, label: "Toplantı Defteri", view: "tutanak", kod: "T-0063" },
       { icon: BookOpen, label: "Çalışma Defteri", view: "calisma-defteri", kod: "CLS" },
+      { icon: Lightbulb, label: "Fikir Defteri", view: "fikir-defteri", kod: "FKD" },
       { icon: Wallet, label: "Kasa Defteri", view: "kasa-defteri", kod: "KASA" },
     ],
   },
@@ -105,10 +107,9 @@ export const WORKSPACES: Workspace[] = [
     ],
   },
   {
-    key: "fikir", label: "Fikir Kulübü", icon: Lightbulb, defaultView: "fikir-kulubu",
+    key: "toplanti", label: "Toplantı Odası", icon: Presentation, defaultView: "toplanti-odasi",
     tabs: [
-      { icon: Lightbulb, label: "Fikir Panosu", view: "fikir-kulubu", kod: "FKR" },
-      { icon: NotebookPen, label: "Fikir Defteri", view: "fikir-defteri", kod: "FKD" },
+      { icon: Presentation, label: "Toplantı Odası", view: "toplanti-odasi", kod: "TPO" },
     ],
   },
   {
