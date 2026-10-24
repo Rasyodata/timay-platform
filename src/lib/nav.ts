@@ -38,6 +38,7 @@ import {
   ShoppingCart,
   Activity,
   Banknote,
+  Lightbulb,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { View } from "@/App";
@@ -101,6 +102,12 @@ export const WORKSPACES: Workspace[] = [
     key: "startup", label: "Startup Yönetimi", icon: Rocket, defaultView: "overview",
     tabs: [
       { icon: LayoutDashboard, label: "Dashboard", view: "overview", kod: "DSB" },
+    ],
+  },
+  {
+    key: "fikir", label: "Fikir Kulübü", icon: Lightbulb, defaultView: "fikir-kulubu",
+    tabs: [
+      { icon: Lightbulb, label: "Fikir Panosu", view: "fikir-kulubu", kod: "FKR" },
     ],
   },
   {

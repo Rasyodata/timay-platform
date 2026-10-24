@@ -90,7 +90,7 @@ function LiveSparkline() {
   );
 }
 
-interface Highlight {
+export interface Highlight {
   icon: LucideIcon;
   label: string;
   base: number;
@@ -164,8 +164,10 @@ function HighlightCard({ item }: { item: Highlight }) {
   );
 }
 
-export function Showcase({ screensaver = false }: { screensaver?: boolean } = {}) {
+export function Showcase({ screensaver = false, opsStats }: { screensaver?: boolean; opsStats?: Highlight[] } = {}) {
   const portfolio = useTicker(487_120_000);
+  // opsStats verilirse (platformda giren kullanıcının değerleri) operasyonel satır onlarla gösterilir.
+  const opsRow = opsStats && opsStats.length ? opsStats : HIGHLIGHTS_OPS;
 
   // Hero value shown in millions of USD, e.g. "496.89 ML DOLAR".
   const usdMillions = (portfolio / 1_000_000).toFixed(2);
@@ -233,9 +235,9 @@ export function Showcase({ screensaver = false }: { screensaver?: boolean } = {}
 
       {/* bottom: two rows of live rotating highlights */}
       <div className="relative space-y-3.5" style={{ animation: "rise 0.7s cubic-bezier(0.22,1,0.36,1) 0.2s both" }}>
-        {/* operasyonel satır (görüşme · inceleme · kullanıcılar · onaylar) */}
+        {/* operasyonel satır — platformda giren kullanıcının değerleri (yoksa genel) */}
         <div className="flex gap-3.5">
-          {HIGHLIGHTS_OPS.map((h) => (
+          {opsRow.map((h) => (
             <HighlightCard key={h.label} item={h} />
           ))}
         </div>

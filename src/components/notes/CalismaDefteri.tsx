@@ -8,7 +8,10 @@ import { useProjects } from "@/context/ProjectsContext";
 import { useAudit } from "@/context/AuditContext";
 
 // Kişisel çalışma defteri — tek sayfa + bölümler; hızlı menü Toplantı Defteri gibi.
-const STORAGE = "timay.calisma-defteri.v1";
+export const STORAGE = "timay.calisma-defteri.v1";
+export type CalismaSayfa = { id: string; baslik: string; tarih: string; proje: string; durum: string };
+/** Ajanda/Takvim için — tarihli çalışma sayfaları. */
+export const loadCalisma = (): CalismaSayfa[] => { try { const a = JSON.parse(localStorage.getItem(STORAGE) || "[]"); return Array.isArray(a) ? a : []; } catch { return []; } };
 const uid = () => "c" + Math.random().toString(36).slice(2, 9);
 const dstr = (d: Date) => { const z = new Date(d); z.setMinutes(z.getMinutes() - z.getTimezoneOffset()); return z.toISOString().slice(0, 10); };
 

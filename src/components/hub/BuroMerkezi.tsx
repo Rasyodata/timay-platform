@@ -5,6 +5,8 @@ import { useModules } from "@/context/ModulesContext";
 import { useUsers } from "@/context/UsersContext";
 import { useAudit } from "@/context/AuditContext";
 import { Showcase } from "@/components/auth/LoginScreen";
+import type { Highlight } from "@/components/auth/LoginScreen";
+import { ListChecks, Inbox, CalendarClock, TrendingUp } from "lucide-react";
 import type { View } from "@/App";
 import { useAllowedWorkspaces } from "@/hooks/useAccess";
 
@@ -51,6 +53,14 @@ export default function BuroMerkezi({ onNavigate }: { onNavigate: (v: View) => v
   const { entries } = useAudit();
   const feed = entries.slice(0, 16);
 
+  // Showcase operasyonel satırı — giren kullanıcının gerçek değerleri
+  const opsStats: Highlight[] = [
+    { icon: ListChecks, label: "Görevlerim", base: gorevlerim.length, kind: "count", unit: "açık", delta: 0, tone: "text-neon-blue", ring: "border-neon-blue/30 bg-neon-blue/10" },
+    { icon: Inbox, label: "Onay Kutum", base: onayKutum.length, kind: "count", unit: "bekliyor", delta: 0, tone: "text-neon-emerald", ring: "border-neon-emerald/30 bg-neon-emerald/10" },
+    { icon: CalendarClock, label: "Bugün Randevu", base: bugunRandevu.length, kind: "count", unit: "bugün", delta: 0, tone: "text-neon-violet", ring: "border-neon-violet/30 bg-neon-violet/10" },
+    { icon: TrendingUp, label: "Yaklaşan Termin", base: yaklasanTermin.length, kind: "count", unit: "termin", delta: 0, tone: "text-series-5", ring: "border-series-5/30 bg-series-5/10" },
+  ];
+
   return (
     <div className="max-w-[1280px] space-y-7 px-4 py-8 md:px-6">
       <header>
@@ -63,7 +73,7 @@ export default function BuroMerkezi({ onNavigate }: { onNavigate: (v: View) => v
 
       {/* Giriş paneli (canlı showcase) — piyasa, portföy, canlı istatistikler */}
       <div className="hidden overflow-hidden rounded-2xl border border-line bg-base shadow-card lg:block">
-        <Showcase />
+        <Showcase opsStats={opsStats} />
       </div>
 
       {/* Canlı aksiyon akışı — kayan yazı */}
