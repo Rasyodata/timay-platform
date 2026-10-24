@@ -3,6 +3,7 @@ import {
   Calendar, ClipboardList, Presentation, ChevronLeft, ChevronRight, Plus, Trash2,
   Users, MapPin, Send, ThumbsUp, Lightbulb, Gavel, Sparkles, FileDown, CheckSquare, X, Radio,
   Target, AlertTriangle, HelpCircle, FileText, ListChecks, Clock,
+  Video, VideoOff, Mic, MicOff, PhoneOff, Maximize2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useUsers } from "@/context/UsersContext";
@@ -35,7 +36,20 @@ type Note = { id: string; metin: string; yazar: string; sehir: string; zaman: st
 type Meeting = { id: string; baslik: string; tarih: string; saat: string; proje: string; gundem: string; katilimcilar: string[]; olusturan: string };
 type Store = { toplantilar: Meeting[]; notlar: Record<string, Note[]> };
 
-const load = (): Store => { try { const s = JSON.parse(localStorage.getItem(STORAGE) || "null"); return s && s.toplantilar ? s : { toplantilar: [], notlar: {} }; } catch { return { toplantilar: [], notlar: {} }; } };
+// Örnek toplantı tohumu — Proje 1 ortaklık toplantısı (hiç toplantı yoksa gösterilir)
+const seedStore = (): Store => {
+  const mid = "seed-proje1", bugun = dstr(new Date());
+  return {
+    toplantilar: [{ id: mid, baslik: "Proje 1 — Ortaklık & Yol Haritası", tarih: bugun, saat: "10:00", proje: "Proje 1", gundem: "Ortaklık yapısı, görev dağılımı ve Q4 yol haritasının netleştirilmesi.", katilimcilar: ["Rasyodata", "Tuğba Yörük", "Kadir Fırat"], olusturan: "Rasyodata" }],
+    notlar: { [mid]: [
+      { id: "seed-n1", metin: "Ortaklık payları ve roller netleştirilsin", yazar: "Rasyodata", sehir: "—", zaman: "10:05", kategori: "Gündem", oy: 0 },
+      { id: "seed-n2", metin: "MVP'yi 6 haftada çıkaralım", yazar: "Tuğba Yörük", sehir: "—", zaman: "10:12", kategori: "Fikir", oy: 3 },
+      { id: "seed-n3", metin: "Proje 1 için ortak banka hesabı açılacak", yazar: "Rasyodata", sehir: "—", zaman: "10:20", kategori: "Karar", oy: 2 },
+      { id: "seed-n4", metin: "Kadir pazarlama planını hazırlayacak", yazar: "Kadir Fırat", sehir: "—", zaman: "10:26", kategori: "Aksiyon", oy: 1 },
+    ] },
+  };
+};
+const load = (): Store => { try { const s = JSON.parse(localStorage.getItem(STORAGE) || "null"); return s && Array.isArray(s.toplantilar) && s.toplantilar.length ? s : seedStore(); } catch { return seedStore(); } };
 // Ajanda/Takvim için — tarihli toplantılar (katılıma göre filtre çağıranda yapılır)
 export type ToplantiKaydi = Meeting;
 export const loadToplantilar = (): Meeting[] => load().toplantilar;
@@ -55,6 +69,10 @@ export default function ToplantiOdasi() {
   const [kategori, setKategori] = useState("Fikir");
   const [ozet, setOzet] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Canlı yayın (simülasyon — WebRTC/Socket.io'ya hazır)
+  const [yayinda, setYayinda] = useState(true);
+  const [mic, setMic] = useState(true);
+  const [kamera, setKamera] = useState(true);
 
   useEffect(() => { localStorage.setItem(STORAGE, JSON.stringify(store)); }, [store]);
 
@@ -278,6 +296,44 @@ export default function ToplantiOdasi() {
                 <span className="shrink-0 rounded-full bg-good/10 px-2.5 py-1 text-[10px] font-bold text-good"><Radio size={10} className="mr-1 inline animate-pulse" />CANLI</span>
               </div>
               {aktif.gundem && <p className="mt-2 rounded-lg bg-panel/60 p-2 text-[12px] text-ink/80"><b className="text-ink">Gündem:</b> {aktif.gundem}</p>}
+            </div>
+
+            {/* Canlı Yayın — video konferans (simülasyon, WebRTC/Socket.io'ya hazır) */}
+            <div className="mb-3 overflow-hidden rounded-xl border border-line bg-[#0B1020] p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="flex items-center gap-1.5 text-xs font-bold text-white"><Video size={14} className="text-neon-blue" /> Canlı Yayın</h3>
+                <span className="flex items-center gap-1 rounded-full bg-critical/20 px-2 py-0.5 text-[10px] font-bold text-critical"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-critical" /> CANLI</span>
+              </div>
+              {yayinda ? (<>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {aktif.katilimcilar.map((k) => { const ben = k === currentUser.name; const kapali = ben && !kamera; return (
+                    <div key={k} className="relative aspect-video overflow-hidden rounded-lg bg-gradient-to-br from-[#1E2540] to-[#0B1020]">
+                      {kapali ? (
+                        <div className="flex h-full items-center justify-center"><span className="grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-neon-blue to-neon-violet text-lg font-bold text-white">{k.charAt(0)}</span></div>
+                      ) : (<>
+                        <span className="absolute inset-0 flex items-center justify-center text-3xl font-black text-white/15">{k.charAt(0)}</span>
+                        <span className="absolute left-1.5 top-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                      </>)}
+                      <div className="absolute inset-x-1 bottom-1 flex items-center justify-between gap-1">
+                        <span className="truncate rounded bg-black/50 px-1.5 py-0.5 text-[9px] font-medium text-white">{ben ? "Siz" : k}{sehirOf(k) !== "—" ? " · " + sehirOf(k) : ""}</span>
+                        {ben ? (mic ? <Mic size={11} className="shrink-0 text-white" /> : <MicOff size={11} className="shrink-0 text-critical" />) : <Mic size={11} className="shrink-0 text-white/50" />}
+                      </div>
+                    </div>
+                  ); })}
+                </div>
+                <div className="mt-2 flex items-center justify-center gap-2">
+                  <button onClick={() => setMic((v) => !v)} title="Mikrofon" className={`grid h-9 w-9 place-items-center rounded-full transition ${mic ? "bg-white/10 text-white hover:bg-white/20" : "bg-critical/20 text-critical"}`}>{mic ? <Mic size={16} /> : <MicOff size={16} />}</button>
+                  <button onClick={() => setKamera((v) => !v)} title="Kamera" className={`grid h-9 w-9 place-items-center rounded-full transition ${kamera ? "bg-white/10 text-white hover:bg-white/20" : "bg-critical/20 text-critical"}`}>{kamera ? <Video size={16} /> : <VideoOff size={16} />}</button>
+                  <button onClick={() => setYayinda(false)} title="Yayından ayrıl" className="grid h-9 w-9 place-items-center rounded-full bg-critical text-white transition hover:opacity-90"><PhoneOff size={16} /></button>
+                  <button title="Tam ekran" className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-white transition hover:bg-white/20"><Maximize2 size={16} /></button>
+                </div>
+                <p className="mt-1.5 text-center text-[10px] text-white/40">Şehirlerarası canlı yayın · WebRTC / Socket.io'ya hazır (simülasyon)</p>
+              </>) : (
+                <div className="flex items-center justify-between rounded-lg bg-white/5 p-3">
+                  <span className="text-xs text-white/60">Yayından ayrıldınız.</span>
+                  <button onClick={() => setYayinda(true)} className="flex items-center gap-1.5 rounded-lg bg-neon-blue px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-neon-blue/90"><Video size={13} /> Yayına Katıl</button>
+                </div>
+              )}
             </div>
 
             <div className="rounded-xl border border-line bg-panel p-4">
