@@ -108,6 +108,7 @@ export const WORKSPACES: Workspace[] = [
     key: "fikir", label: "Fikir Kulübü", icon: Lightbulb, defaultView: "fikir-kulubu",
     tabs: [
       { icon: Lightbulb, label: "Fikir Panosu", view: "fikir-kulubu", kod: "FKR" },
+      { icon: NotebookPen, label: "Fikir Defteri", view: "fikir-defteri", kod: "FKD" },
     ],
   },
   {

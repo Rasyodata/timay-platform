@@ -20,6 +20,7 @@ import FinansalRaporlar from "@/components/hub/FinansalRaporlar";
 import KararMerkezi from "@/components/hub/KararMerkezi";
 import BuroMerkezi from "@/components/hub/BuroMerkezi";
 import FikirKulubu from "@/components/hub/FikirKulubu";
+import FikirDefteri from "@/components/hub/FikirDefteri";
 import AjandaPage from "@/components/agenda/AjandaPage";
 import AjandaDashboard from "@/components/agenda/AjandaDashboard";
 import PagesPage from "@/components/docs/PagesPage";
@@ -59,6 +60,7 @@ export type View =
   | "karar-merkezi"
   | "buro-merkezi"
   | "fikir-kulubu"
+  | "fikir-defteri"
   | "ajanda"
   | "ajandam"
   | "dokumanlar"
@@ -163,6 +165,7 @@ function DashboardShell() {
                 {view === "karar-merkezi" && <KararMerkezi onNavigate={navigate} />}
                 {view === "buro-merkezi" && <BuroMerkezi onNavigate={navigate} />}
                 {view === "fikir-kulubu" && <FikirKulubu />}
+                {view === "fikir-defteri" && <FikirDefteri />}
                 {view === "ajanda" && <AjandaPage onNavigate={navigate} />}
                 {view === "ajandam" && <AjandaDashboard onNavigate={navigate} />}
                 {view === "planlayici" && <TimayPlanlayici onNavigate={navigate} />}
