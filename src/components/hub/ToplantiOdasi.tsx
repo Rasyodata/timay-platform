@@ -11,6 +11,8 @@ import type { LucideIcon } from "lucide-react";
 import { useUsers } from "@/context/UsersContext";
 import { useModules } from "@/context/ModulesContext";
 import { useAudit } from "@/context/AuditContext";
+import CanliYayin from "@/components/hub/CanliYayin";
+import { yayinAktif } from "@/lib/useYayin";
 
 // Toplantı Odası — aylık toplantı takvimi + kayıt + akıllı toplantı defteri (canvas).
 const STORAGE = "timay.toplanti-odasi.v1";
@@ -348,7 +350,10 @@ export default function ToplantiOdasi() {
               {aktif.gundem && <p className="mt-2 rounded-lg bg-panel/60 p-2 text-[12px] text-ink/80"><b className="text-ink">Gündem:</b> {aktif.gundem}</p>}
             </div>
 
-            {/* Canlı Yayın — video konferans (simülasyon, WebRTC/Socket.io'ya hazır) */}
+            {yayinAktif() ? (
+              <CanliYayin meetingId={aktif.id} benAd={currentUser.name} sehirOf={sehirOf} izleyici={izleyici} davetLinki={davetLinki} linkKopya={linkKopya} katilimciSayi={aktif.katilimcilar.length} />
+            ) : (<>
+            {/* Canlı Yayın — video konferans (simülasyon; backend yoksa) */}
             <div className="mb-3 overflow-hidden rounded-xl border border-line bg-[#0B1020] p-3">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <h3 className="flex items-center gap-1.5 text-xs font-bold text-white"><Video size={14} className="text-neon-blue" /> Canlı Yayın{izleyici && <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[9px] font-bold text-amber-300">İZLEYİCİ MODU</span>}</h3>
@@ -415,6 +420,7 @@ export default function ToplantiOdasi() {
                 </div>
               )}
             </div>
+            </>)}
 
             <div className="rounded-xl border border-line bg-panel p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">

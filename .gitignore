@@ -6,3 +6,6 @@ dist-ssr
 
 # Electron build çıktıları
 release/
+
+# signaling server deps
+server/node_modules
