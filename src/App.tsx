@@ -104,8 +104,10 @@ export type View =
 function DashboardShell() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [view, setView] = useState<View>("ajandam");
-  const [activeWs, setActiveWs] = useState("buro");
+  // Davet linki (?izleyici=1) ile girişte doğrudan Toplantı Odası açılır
+  const izleyiciLink = (() => { try { return new URLSearchParams(window.location.search).get("izleyici") === "1"; } catch { return false; } })();
+  const [view, setView] = useState<View>(izleyiciLink ? "toplanti-odasi" : "ajandam");
+  const [activeWs, setActiveWs] = useState(izleyiciLink ? "toplanti" : "buro");
   const access = useAccess();
 
   // Yetkisiz çalışma alanı/sekmedeyse izinli olana yönlendir (kullanıcı değişince de)

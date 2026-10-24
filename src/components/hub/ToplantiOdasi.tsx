@@ -4,6 +4,8 @@ import {
   Users, MapPin, Send, ThumbsUp, Lightbulb, Gavel, Sparkles, FileDown, CheckSquare, X, Radio,
   Target, AlertTriangle, HelpCircle, FileText, ListChecks, Clock,
   Video, VideoOff, Mic, MicOff, PhoneOff, Maximize2,
+  ZoomIn, ZoomOut, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, RotateCcw, Eye,
+  MonitorUp, Link2, Check,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useUsers } from "@/context/UsersContext";
@@ -69,10 +71,56 @@ export default function ToplantiOdasi() {
   const [kategori, setKategori] = useState("Fikir");
   const [ozet, setOzet] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  // Canlı yayın (simülasyon — WebRTC/Socket.io'ya hazır)
-  const [yayinda, setYayinda] = useState(true);
+  // Canlı yayın — kendi kameran gerçek (getUserMedia); çok-kullanıcı için WebRTC/Socket.io gerekir
+  const [yayinda, setYayinda] = useState(false);
   const [mic, setMic] = useState(true);
   const [kamera, setKamera] = useState(true);
+  const [kameraHata, setKameraHata] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Yayına katılınca kendi kamera+mikrofon akışını al
+  useEffect(() => {
+    let active = true;
+    if (yayinda && !streamRef.current) {
+      navigator.mediaDevices?.getUserMedia({ video: true, audio: true })
+        .then((s) => { if (!active) { s.getTracks().forEach((t) => t.stop()); return; } streamRef.current = s; if (localVideoRef.current) localVideoRef.current.srcObject = s; s.getVideoTracks().forEach((t) => (t.enabled = kamera)); s.getAudioTracks().forEach((t) => (t.enabled = mic)); setKameraHata(null); })
+        .catch(() => { if (active) setKameraHata("Kamera/mikrofon erişimi yok — izin verilmedi ya da cihaz bulunamadı."); });
+    }
+    if (!yayinda && streamRef.current) { streamRef.current.getTracks().forEach((t) => t.stop()); streamRef.current = null; }
+    return () => { active = false; };
+  }, [yayinda]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { streamRef.current?.getVideoTracks().forEach((t) => (t.enabled = kamera)); }, [kamera]);
+  useEffect(() => { streamRef.current?.getAudioTracks().forEach((t) => (t.enabled = mic)); }, [mic]);
+  const kameraReset = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
+
+  // Ekran paylaşımı (gerçek — getDisplayMedia)
+  const [ekranPaylasim, setEkranPaylasim] = useState(false);
+  const screenVideoRef = useRef<HTMLVideoElement>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+  const ekranPaylas = async () => {
+    if (ekranPaylasim) { screenStreamRef.current?.getTracks().forEach((t) => t.stop()); screenStreamRef.current = null; setEkranPaylasim(false); return; }
+    try {
+      const s = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      screenStreamRef.current = s; if (screenVideoRef.current) screenVideoRef.current.srcObject = s;
+      s.getVideoTracks()[0]?.addEventListener("ended", () => { screenStreamRef.current = null; setEkranPaylasim(false); });
+      setEkranPaylasim(true);
+    } catch { /* kullanıcı iptal etti */ }
+  };
+  useEffect(() => () => { streamRef.current?.getTracks().forEach((t) => t.stop()); screenStreamRef.current?.getTracks().forEach((t) => t.stop()); }, []);
+
+  // Davet linki (yabancı izleyici — view-only) + izleyici modu
+  const [linkKopya, setLinkKopya] = useState(false);
+  const [izleyici, setIzleyici] = useState(false);
+  useEffect(() => { const p = new URLSearchParams(window.location.search); if (p.get("izleyici") === "1") { setIzleyici(true); setTab("oda"); const t = p.get("toplanti"); if (t) setSelMeet(t); } }, []);
+  const davetLinki = () => {
+    if (!aktif) return;
+    const url = `${window.location.origin}${window.location.pathname}?toplanti=${aktif.id}&izleyici=1`;
+    navigator.clipboard?.writeText(url).catch(() => {});
+    setLinkKopya(true); setTimeout(() => setLinkKopya(false), 2000);
+  };
 
   useEffect(() => { localStorage.setItem(STORAGE, JSON.stringify(store)); }, [store]);
 
@@ -254,7 +302,8 @@ export default function ToplantiOdasi() {
             <div className="rounded-xl border border-line bg-panel p-4">
               <select value={aktif.id} onChange={(e) => setSelMeet(e.target.value)} className="w-full rounded-lg border border-line bg-base/40 px-2 py-1.5 text-sm font-semibold text-ink outline-none focus:border-neon-blue">{gorunurToplantilar.map((m) => <option key={m.id} value={m.id}>{m.baslik}</option>)}</select>
             </div>
-            {/* Hızlı Ekle — toplantı sırasında hızlı erişim */}
+            {/* Hızlı Ekle — toplantı sırasında hızlı erişim (izleyicide gizli) */}
+            {!izleyici && (
             <div className="rounded-xl border border-line bg-panel p-4">
               <h3 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-ink"><Plus size={14} className="text-neon-violet" /> Hızlı Ekle</h3>
               <p className="mb-2.5 text-[11px] text-muted">Kategori seç, yukarıdan yaz — deftere anında düşer.</p>
@@ -267,6 +316,7 @@ export default function ToplantiOdasi() {
                 ); })}
               </div>
             </div>
+            )}
             <div className="rounded-xl border border-line bg-panel p-4">
               <h3 className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted"><Radio size={12} className="animate-pulse text-good" /> Canlı Katılımcılar</h3>
               <div className="space-y-1.5">
@@ -300,20 +350,32 @@ export default function ToplantiOdasi() {
 
             {/* Canlı Yayın — video konferans (simülasyon, WebRTC/Socket.io'ya hazır) */}
             <div className="mb-3 overflow-hidden rounded-xl border border-line bg-[#0B1020] p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <h3 className="flex items-center gap-1.5 text-xs font-bold text-white"><Video size={14} className="text-neon-blue" /> Canlı Yayın</h3>
-                <span className="flex items-center gap-1 rounded-full bg-critical/20 px-2 py-0.5 text-[10px] font-bold text-critical"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-critical" /> CANLI</span>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <h3 className="flex items-center gap-1.5 text-xs font-bold text-white"><Video size={14} className="text-neon-blue" /> Canlı Yayın{izleyici && <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[9px] font-bold text-amber-300">İZLEYİCİ MODU</span>}</h3>
+                <div className="flex items-center gap-1.5">
+                  {!izleyici && <button onClick={davetLinki} title="Dışarıdan izleyici için davet linki kopyala" className="flex items-center gap-1 rounded-lg bg-white/10 px-2 py-1 text-[10px] font-medium text-white transition hover:bg-white/20">{linkKopya ? <><Check size={11} /> Kopyalandı</> : <><Link2 size={11} /> Davet Linki</>}</button>}
+                  <span className="flex items-center gap-1 rounded-full bg-critical/20 px-2 py-0.5 text-[10px] font-bold text-critical"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-critical" /> CANLI</span>
+                </div>
               </div>
               {yayinda ? (<>
+                {/* Ekran paylaşımı — gerçek getDisplayMedia */}
+                {ekranPaylasim && (
+                  <div className="relative mb-2 aspect-video overflow-hidden rounded-lg bg-black">
+                    <video ref={screenVideoRef} autoPlay muted playsInline className="h-full w-full object-contain" />
+                    <span className="absolute left-2 top-2 flex items-center gap-1 rounded bg-neon-blue/80 px-2 py-0.5 text-[10px] font-bold text-white"><MonitorUp size={11} /> EKRAN PAYLAŞIMI · {currentUser.name}</span>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {aktif.katilimcilar.map((k) => { const ben = k === currentUser.name; const kapali = ben && !kamera; return (
-                    <div key={k} className="relative aspect-video overflow-hidden rounded-lg bg-gradient-to-br from-[#1E2540] to-[#0B1020]">
-                      {kapali ? (
+                  {aktif.katilimcilar.map((k) => { const ben = k === currentUser.name; const avatarGoster = ben ? (!kamera || !!kameraHata) : true; return (
+                    <div key={k} className={`relative aspect-video overflow-hidden rounded-lg bg-gradient-to-br from-[#1E2540] to-[#0B1020] ${ben ? "ring-2 ring-neon-blue/60" : ""}`}>
+                      {ben && <video ref={localVideoRef} autoPlay muted playsInline className="absolute inset-0 h-full w-full object-cover" style={{ transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`, display: kamera && !kameraHata ? "block" : "none" }} />}
+                      {avatarGoster ? (
                         <div className="flex h-full items-center justify-center"><span className="grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-neon-blue to-neon-violet text-lg font-bold text-white">{k.charAt(0)}</span></div>
-                      ) : (<>
+                      ) : (!ben && (<>
                         <span className="absolute inset-0 flex items-center justify-center text-3xl font-black text-white/15">{k.charAt(0)}</span>
                         <span className="absolute left-1.5 top-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-                      </>)}
+                      </>))}
+                      {ben && kameraHata && <span className="absolute inset-x-1 top-1 rounded bg-black/70 px-1 py-0.5 text-[8px] leading-tight text-amber-300">{kameraHata}</span>}
                       <div className="absolute inset-x-1 bottom-1 flex items-center justify-between gap-1">
                         <span className="truncate rounded bg-black/50 px-1.5 py-0.5 text-[9px] font-medium text-white">{ben ? "Siz" : k}{sehirOf(k) !== "—" ? " · " + sehirOf(k) : ""}</span>
                         {ben ? (mic ? <Mic size={11} className="shrink-0 text-white" /> : <MicOff size={11} className="shrink-0 text-critical" />) : <Mic size={11} className="shrink-0 text-white/50" />}
@@ -321,16 +383,34 @@ export default function ToplantiOdasi() {
                     </div>
                   ); })}
                 </div>
+
+                {/* Kamera ayarı — dijital pan/zoom (kendi görüntün) · izleyicide gizli */}
+                {!izleyici && (<>
+                <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
+                  <span className="text-[10px] font-semibold text-white/50">Kamera ayarı</span>
+                  <button onClick={() => setPan((p) => ({ ...p, x: p.x + 20 }))} title="Sola" className="grid h-7 w-7 place-items-center rounded-lg bg-white/10 text-white transition hover:bg-white/20"><ArrowLeft size={13} /></button>
+                  <button onClick={() => setPan((p) => ({ ...p, x: p.x - 20 }))} title="Sağa" className="grid h-7 w-7 place-items-center rounded-lg bg-white/10 text-white transition hover:bg-white/20"><ArrowRight size={13} /></button>
+                  <button onClick={() => setPan((p) => ({ ...p, y: p.y + 20 }))} title="Yukarı" className="grid h-7 w-7 place-items-center rounded-lg bg-white/10 text-white transition hover:bg-white/20"><ArrowUp size={13} /></button>
+                  <button onClick={() => setPan((p) => ({ ...p, y: p.y - 20 }))} title="Aşağı" className="grid h-7 w-7 place-items-center rounded-lg bg-white/10 text-white transition hover:bg-white/20"><ArrowDown size={13} /></button>
+                  <span className="mx-0.5 h-4 w-px bg-white/15" />
+                  <button onClick={() => setZoom((z) => Math.min(3, +(z + 0.2).toFixed(1)))} title="Yakınlaş" className="grid h-7 w-7 place-items-center rounded-lg bg-white/10 text-white transition hover:bg-white/20"><ZoomIn size={13} /></button>
+                  <button onClick={() => setZoom((z) => Math.max(1, +(z - 0.2).toFixed(1)))} title="Uzaklaş" className="grid h-7 w-7 place-items-center rounded-lg bg-white/10 text-white transition hover:bg-white/20"><ZoomOut size={13} /></button>
+                  <span className="w-9 text-center text-[10px] text-white/50 nums">{Math.round(zoom * 100)}%</span>
+                  <button onClick={kameraReset} title="Sıfırla" className="grid h-7 w-7 place-items-center rounded-lg bg-white/10 text-white transition hover:bg-white/20"><RotateCcw size={13} /></button>
+                </div>
+
                 <div className="mt-2 flex items-center justify-center gap-2">
                   <button onClick={() => setMic((v) => !v)} title="Mikrofon" className={`grid h-9 w-9 place-items-center rounded-full transition ${mic ? "bg-white/10 text-white hover:bg-white/20" : "bg-critical/20 text-critical"}`}>{mic ? <Mic size={16} /> : <MicOff size={16} />}</button>
                   <button onClick={() => setKamera((v) => !v)} title="Kamera" className={`grid h-9 w-9 place-items-center rounded-full transition ${kamera ? "bg-white/10 text-white hover:bg-white/20" : "bg-critical/20 text-critical"}`}>{kamera ? <Video size={16} /> : <VideoOff size={16} />}</button>
+                  <button onClick={ekranPaylas} title="Ekran paylaş" className={`grid h-9 w-9 place-items-center rounded-full transition ${ekranPaylasim ? "bg-neon-blue text-white" : "bg-white/10 text-white hover:bg-white/20"}`}><MonitorUp size={16} /></button>
                   <button onClick={() => setYayinda(false)} title="Yayından ayrıl" className="grid h-9 w-9 place-items-center rounded-full bg-critical text-white transition hover:opacity-90"><PhoneOff size={16} /></button>
                   <button title="Tam ekran" className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-white transition hover:bg-white/20"><Maximize2 size={16} /></button>
                 </div>
-                <p className="mt-1.5 text-center text-[10px] text-white/40">Şehirlerarası canlı yayın · WebRTC / Socket.io'ya hazır (simülasyon)</p>
+                </>)}
+                <p className="mt-1.5 text-center text-[10px] text-white/40">{izleyici ? "İzleyici modu — yalnızca görüntülersiniz." : "Kendi kameran gerçek (bu cihaz)."} · <Eye size={10} className="inline" /> {aktif.katilimcilar.length} bağlı — çok-kullanıcılı canlı görüntü için WebRTC/Socket.io sunucusu gerekir.</p>
               </>) : (
-                <div className="flex items-center justify-between rounded-lg bg-white/5 p-3">
-                  <span className="text-xs text-white/60">Yayından ayrıldınız.</span>
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white/5 p-3">
+                  <span className="text-xs text-white/60">Yayın kapalı — kameranı aç ve toplantıya katıl.</span>
                   <button onClick={() => setYayinda(true)} className="flex items-center gap-1.5 rounded-lg bg-neon-blue px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-neon-blue/90"><Video size={13} /> Yayına Katıl</button>
                 </div>
               )}
@@ -352,7 +432,8 @@ export default function ToplantiOdasi() {
                 </div>
               )}
 
-              {/* not ekleme — aktif kategori + metin */}
+              {/* not ekleme — aktif kategori + metin (izleyicide gizli) */}
+              {!izleyici && (
               <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-line bg-base/40 p-2">
                 {(() => { const km = KMETA[kategori] ?? { icon: FileText, c: "#64748B" }; return (
                   <span className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold" style={{ background: km.c + "1f", color: km.c }}><km.icon size={13} /> {kategori}</span>
@@ -360,6 +441,7 @@ export default function ToplantiOdasi() {
                 <input ref={inputRef} value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addNote()} placeholder={`${kategori} karala — anında düşer (soldan kategori değiştir)…`} className="min-w-0 flex-1 border-0 bg-transparent px-1 text-sm text-ink outline-none placeholder:text-faint" />
                 <button onClick={() => addNote()} disabled={!note.trim()} className="flex shrink-0 items-center gap-1 rounded-lg bg-neon-blue px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-neon-blue/90 disabled:opacity-40"><Send size={14} /> Ekle</button>
               </div>
+              )}
 
               {/* canlı not akışı */}
               <div className="space-y-2">
@@ -372,9 +454,9 @@ export default function ToplantiOdasi() {
                       <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] text-muted"><span className="rounded px-1 font-bold" style={{ background: km.c + "1f", color: km.c }}>{n.kategori}</span><span className="font-semibold text-ink/70">{n.yazar}</span><MapPin size={9} /> {n.sehir} · {n.zaman}{n.gorev && <span className="rounded bg-good/15 px-1 font-semibold text-good">göreve dönüştü</span>}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
-                      <button onClick={() => voteNote(n.id)} className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-muted transition hover:bg-neon-blue/10 hover:text-neon-blue"><ThumbsUp size={13} /> {n.oy}</button>
-                      {!n.gorev && <button onClick={() => toGorev(n)} title="Göreve dönüştür" className="grid h-7 w-7 place-items-center rounded-lg text-muted opacity-0 transition hover:bg-good/10 hover:text-good group-hover:opacity-100"><CheckSquare size={14} /></button>}
-                      <button onClick={() => delNote(n.id)} className="grid h-7 w-7 place-items-center rounded-lg text-faint opacity-0 transition hover:text-critical group-hover:opacity-100"><X size={13} /></button>
+                      <button onClick={() => !izleyici && voteNote(n.id)} className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-muted transition hover:bg-neon-blue/10 hover:text-neon-blue"><ThumbsUp size={13} /> {n.oy}</button>
+                      {!izleyici && !n.gorev && <button onClick={() => toGorev(n)} title="Göreve dönüştür" className="grid h-7 w-7 place-items-center rounded-lg text-muted opacity-0 transition hover:bg-good/10 hover:text-good group-hover:opacity-100"><CheckSquare size={14} /></button>}
+                      {!izleyici && <button onClick={() => delNote(n.id)} className="grid h-7 w-7 place-items-center rounded-lg text-faint opacity-0 transition hover:text-critical group-hover:opacity-100"><X size={13} /></button>}
                     </div>
                   </div>
                 ); })}
